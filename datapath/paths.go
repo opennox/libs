@@ -29,7 +29,7 @@ func cleanPath(path string) string {
 	return strings.ReplaceAll(path, `\`, `/`)
 }
 
-func tryPaths(paths []string) []string {
+func tryWithPrefixes(paths ...string) []string {
 	var out []string
 	for _, pref := range pathPrefixes() {
 		if pref == "" {
@@ -61,6 +61,10 @@ func pathPrefixes() []string {
 	return []string{
 		// Linux Snapcraft installation user common dir
 		os.Getenv("SNAP_USER_COMMON"),
+		// XDG environment variable
+		os.Getenv("XDG_DATA_HOME"),
+		// XDG default directory
+		filepath.Join(home, ".local/share"),
 		// Wine default paths
 		filepath.Join(home, ".wine/drive_c"),
 		filepath.Join(home, ".wine/drive_d"),

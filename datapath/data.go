@@ -4,6 +4,7 @@ package datapath
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"sync"
 
 	"github.com/noxworld-dev/opennox-lib/ifs"
@@ -52,6 +53,11 @@ func FindData() string {
 		os.Getenv("NOX_DATA"),    // takes priority
 		".",                      // current dir overrides registry and other install paths
 		filepath.Dir(os.Args[0]), // same for binary dir
+	}
+	if runtime.GOOS != "windows" {
+		// search for Nox directory in all the prefixes
+		// useful for XDG paths on Linux
+		consider = append(consider, tryWithPrefixes("Nox")...)
 	}
 	// search in registry by default
 	consider = append(consider, registryPaths()...)

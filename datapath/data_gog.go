@@ -51,7 +51,7 @@ func gogPaths() []string {
 		`Program Files (x86)\GOGcom\Nox`,
 		`Program Files\GOGcom\Nox`,
 	)
-	out := tryPaths(paths)
+	out := tryWithPrefixes(paths...)
 	for _, path := range out {
 		gogLog.Printf("potential install path: %q", path)
 	}
