@@ -8,7 +8,9 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"regexp"
 
+	"github.com/noxworld-dev/opennox-lib/log"
 	"github.com/noxworld-dev/opennox-lib/strman"
 	"github.com/noxworld-dev/opennox-lib/types"
 )
@@ -17,6 +19,7 @@ var (
 	reflThing     = reflect.TypeOf(Thing{})
 	reflProcFunc  = reflect.TypeOf(ProcFunc{})
 	reflThingKeys = make(map[string]reflect.StructField)
+	regexAlphanum = regexp.MustCompile(`^[A-Za-z0-9_]+`)
 )
 
 func init() {
@@ -278,6 +281,11 @@ func (f *Reader) ReadThingSect() (*Thing, error) {
 			val := ""
 			if len(kv) == 2 {
 				val = strings.TrimSpace(kv[1])
+			}
+			// workaround for single bugged entry in demo
+			if !regexAlphanum.MatchString(key) {
+				log.Printf("failed to parse thing attr entry: %s", kv)
+				continue
 			}
 			switch key {
 			case "DRAW":
