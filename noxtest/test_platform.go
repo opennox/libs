@@ -14,7 +14,7 @@ func (p *MockPlatform) Ticks() time.Duration {
 }
 
 func (p *MockPlatform) Sleep(dt time.Duration) {
-	p.T = dt
+	p.T += dt
 }
 
 func (p *MockPlatform) TimeSeed() int64 {
