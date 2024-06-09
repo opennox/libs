@@ -4,7 +4,7 @@ import (
 	"time"
 )
 
-// Platform implementation mock to allow test using ticks
+// MockPlatform is a mock Platform implementation to allow test using ticks
 type MockPlatform struct {
 	T time.Duration
 }
