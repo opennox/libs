@@ -6,8 +6,8 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/noxworld-dev/opennox-lib/ifs"
-	"github.com/noxworld-dev/opennox-lib/log"
+	"github.com/opennox/libs/ifs"
+	"github.com/opennox/libs/log"
 )
 
 var Log = log.New("path")

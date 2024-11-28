@@ -8,8 +8,8 @@ import (
 
 	"github.com/shoenig/test/must"
 
-	"github.com/noxworld-dev/opennox-lib/script"
-	"github.com/noxworld-dev/opennox-lib/script/scripttest"
+	"github.com/opennox/libs/script"
+	"github.com/opennox/libs/script/scripttest"
 )
 
 func TestScriptDir(t *testing.T) {

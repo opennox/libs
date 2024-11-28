@@ -7,9 +7,9 @@ import (
 	ns4 "github.com/noxworld-dev/noxscript/ns/v4"
 	"github.com/shoenig/test/must"
 
-	"github.com/noxworld-dev/opennox-lib/script"
-	"github.com/noxworld-dev/opennox-lib/spell"
-	"github.com/noxworld-dev/opennox-lib/types"
+	"github.com/opennox/libs/script"
+	"github.com/opennox/libs/spell"
+	"github.com/opennox/libs/types"
 )
 
 func (g *testGame) newUnit(id string, x, y float32) *testUnit {

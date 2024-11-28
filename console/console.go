@@ -6,9 +6,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/noxworld-dev/opennox-lib/client/keybind"
-	"github.com/noxworld-dev/opennox-lib/log"
-	"github.com/noxworld-dev/opennox-lib/strman"
+	"github.com/opennox/libs/client/keybind"
+	"github.com/opennox/libs/log"
+	"github.com/opennox/libs/strman"
 )
 
 // Color of console text messages.

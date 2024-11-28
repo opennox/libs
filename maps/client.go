@@ -13,8 +13,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/opennox/opennox-lib/common"
-	"github.com/opennox/opennox-lib/ifs"
+	"github.com/opennox/libs/common"
+	"github.com/opennox/libs/ifs"
 )
 
 const (

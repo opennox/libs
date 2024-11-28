@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/noxworld-dev/opennox-lib/common"
+	"github.com/opennox/libs/common"
 )
 
 // SaveNameFromPath gives a save directory name based on a path to player save file.

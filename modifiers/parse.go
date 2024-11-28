@@ -11,7 +11,7 @@ import (
 
 	crypt "github.com/noxworld-dev/noxcrypt"
 
-	"github.com/noxworld-dev/opennox-lib/ifs"
+	"github.com/opennox/libs/ifs"
 )
 
 type File struct {

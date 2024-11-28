@@ -8,7 +8,7 @@ import (
 
 	"github.com/go-gl/gl/v3.3-core/gl"
 
-	"github.com/noxworld-dev/opennox-lib/log"
+	"github.com/opennox/libs/log"
 )
 
 var (

@@ -6,8 +6,8 @@ import (
 
 	"github.com/shoenig/test/must"
 
-	"github.com/noxworld-dev/opennox-lib/script"
-	"github.com/noxworld-dev/opennox-lib/types"
+	"github.com/opennox/libs/script"
+	"github.com/opennox/libs/types"
 )
 
 func (g *testGame) ObjectTypeByID(id string) script.ObjectType {

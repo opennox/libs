@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/noxworld-dev/opennox-lib/log"
+	"github.com/opennox/libs/log"
 )
 
 type ID string

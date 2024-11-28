@@ -9,7 +9,7 @@ import (
 
 	"github.com/shoenig/test/must"
 
-	"github.com/noxworld-dev/opennox-lib/noxtest"
+	"github.com/opennox/libs/noxtest"
 )
 
 func newPaletteImage(pal color.Palette) *image.Paletted {

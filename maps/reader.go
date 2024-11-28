@@ -9,7 +9,7 @@ import (
 
 	"github.com/opennox/noxcrypt"
 
-	"github.com/opennox/opennox-lib/binenc"
+	"github.com/opennox/libs/binenc"
 )
 
 type Reader struct {

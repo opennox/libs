@@ -5,8 +5,8 @@ import (
 
 	"github.com/go-gl/glfw/v3.3/glfw"
 
-	"github.com/noxworld-dev/opennox-lib/client/seat"
-	"github.com/noxworld-dev/opennox-lib/types"
+	"github.com/opennox/libs/client/seat"
+	"github.com/opennox/libs/types"
 )
 
 type inputData struct {

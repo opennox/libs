@@ -8,7 +8,7 @@ import (
 
 	"github.com/opennox/noxscript/ns/asm"
 
-	"github.com/opennox/opennox-lib/binenc"
+	"github.com/opennox/libs/binenc"
 )
 
 func init() {

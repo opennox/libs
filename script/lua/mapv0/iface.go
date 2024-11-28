@@ -3,7 +3,7 @@ package mapv0
 import (
 	lua "github.com/yuin/gopher-lua"
 
-	"github.com/noxworld-dev/opennox-lib/script"
+	"github.com/opennox/libs/script"
 )
 
 func (vm *api) indexInterfaceV0(val interface{}, key string) (lua.LValue, bool) {

@@ -14,7 +14,7 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"golang.org/x/exp/slices"
 
-	"github.com/opennox/opennox-lib/ifs"
+	"github.com/opennox/libs/ifs"
 )
 
 var _ http.Handler = (*Server)(nil)

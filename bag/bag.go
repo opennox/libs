@@ -10,9 +10,9 @@ import (
 	"path"
 	"strings"
 
-	"github.com/opennox/opennox-lib/ifs"
-	"github.com/opennox/opennox-lib/noximage/pcx"
-	"github.com/opennox/opennox-lib/nxz"
+	"github.com/opennox/libs/ifs"
+	"github.com/opennox/libs/noximage/pcx"
+	"github.com/opennox/libs/nxz"
 )
 
 var endiness = binary.LittleEndian

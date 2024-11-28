@@ -1,7 +1,7 @@
 package object
 
 import (
-	"github.com/noxworld-dev/opennox-lib/enum"
+	"github.com/opennox/libs/enum"
 )
 
 var FoodClassNames = []string{

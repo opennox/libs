@@ -9,7 +9,7 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/opennox/opennox-lib/noxnet"
+	"github.com/opennox/libs/noxnet"
 )
 
 var (

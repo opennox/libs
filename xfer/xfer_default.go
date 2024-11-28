@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/opennox/opennox-lib/binenc"
-	"github.com/opennox/opennox-lib/types"
+	"github.com/opennox/libs/binenc"
+	"github.com/opennox/libs/types"
 )
 
 const DefaultType = Type("DefaultXfer")

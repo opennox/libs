@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/opennox/opennox-lib/datapath"
-	"github.com/opennox/opennox-lib/ifs"
+	"github.com/opennox/libs/datapath"
+	"github.com/opennox/libs/ifs"
 )
 
 func NewNativeDownloader(dir string) *NativeDownloader {

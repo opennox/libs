@@ -3,7 +3,7 @@ package datapath
 import (
 	"path/filepath"
 
-	"github.com/noxworld-dev/opennox-lib/common"
+	"github.com/opennox/libs/common"
 )
 
 // Maps returns the current Nox maps dir. If additional args are provided, they will be joined with the maps dir.

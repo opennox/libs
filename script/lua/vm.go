@@ -11,9 +11,9 @@ import (
 
 	lua "github.com/yuin/gopher-lua"
 
-	"github.com/noxworld-dev/opennox-lib/ifs"
-	"github.com/noxworld-dev/opennox-lib/script"
-	"github.com/noxworld-dev/opennox-lib/script/lua/mapv0"
+	"github.com/opennox/libs/ifs"
+	"github.com/opennox/libs/script"
+	"github.com/opennox/libs/script/lua/mapv0"
 )
 
 type vmStop struct{}

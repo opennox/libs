@@ -3,7 +3,7 @@ package keybind
 import (
 	"strconv"
 
-	"github.com/noxworld-dev/opennox-lib/strman"
+	"github.com/opennox/libs/strman"
 )
 
 const (

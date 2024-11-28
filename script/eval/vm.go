@@ -18,9 +18,9 @@ import (
 	ns4 "github.com/noxworld-dev/noxscript/ns/v4"
 	nseval4 "github.com/noxworld-dev/noxscript/ns/v4/eval"
 
-	"github.com/noxworld-dev/opennox-lib/script"
-	"github.com/noxworld-dev/opennox-lib/script/eval/imports"
-	"github.com/noxworld-dev/opennox-lib/script/eval/stdlib"
+	"github.com/opennox/libs/script"
+	"github.com/opennox/libs/script/eval/imports"
+	"github.com/opennox/libs/script/eval/stdlib"
 )
 
 var useSymbols []Exports
@@ -285,9 +285,9 @@ package main
 import (
 	"fmt"
 
-	"github.com/noxworld-dev/opennox-lib/types"
-	"github.com/noxworld-dev/opennox-lib/object"
-	"github.com/noxworld-dev/opennox-lib/script"
+	"github.com/opennox/libs/types"
+	"github.com/opennox/libs/object"
+	"github.com/opennox/libs/script"
 
 	ns3 "github.com/noxworld-dev/noxscript/ns/v3"
 	ns4 "github.com/noxworld-dev/noxscript/ns/v4"

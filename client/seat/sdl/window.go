@@ -7,10 +7,10 @@ import (
 
 	"github.com/veandco/go-sdl2/sdl"
 
-	"github.com/noxworld-dev/opennox-lib/client/seat"
-	"github.com/noxworld-dev/opennox-lib/client/seat/opengl"
-	"github.com/noxworld-dev/opennox-lib/env"
-	"github.com/noxworld-dev/opennox-lib/log"
+	"github.com/opennox/libs/client/seat"
+	"github.com/opennox/libs/client/seat/opengl"
+	"github.com/opennox/libs/env"
+	"github.com/opennox/libs/log"
 )
 
 var (

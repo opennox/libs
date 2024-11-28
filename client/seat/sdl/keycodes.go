@@ -22,7 +22,7 @@
 
 package sdl
 
-import "github.com/opennox/opennox-lib/client/keybind"
+import "github.com/opennox/libs/client/keybind"
 
 // TODO: map the following keys, if possible:
 // #define DIK_UNDERLINE       0x93    /*                     (NEC PC98) */

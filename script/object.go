@@ -3,9 +3,9 @@ package script
 import (
 	"fmt"
 
-	"github.com/noxworld-dev/opennox-lib/object"
+	"github.com/opennox/libs/object"
 
-	"github.com/noxworld-dev/opennox-lib/types"
+	"github.com/opennox/libs/types"
 )
 
 type ObjectType interface {

@@ -16,7 +16,7 @@ import (
 	nscmd "github.com/opennox/noxscript/ns/v3/cmd"
 	"github.com/opennox/noxscript/ns/v3/noxast"
 
-	"github.com/opennox/opennox-lib/maps"
+	"github.com/opennox/libs/maps"
 )
 
 func init() {

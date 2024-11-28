@@ -5,8 +5,8 @@ import (
 
 	ns4 "github.com/noxworld-dev/noxscript/ns/v4"
 
-	"github.com/noxworld-dev/opennox-lib/spell"
-	"github.com/noxworld-dev/opennox-lib/types"
+	"github.com/opennox/libs/spell"
+	"github.com/opennox/libs/types"
 )
 
 // Living is an interface for objects that are alive.

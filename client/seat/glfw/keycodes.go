@@ -3,7 +3,7 @@ package glfw
 import (
 	"github.com/go-gl/glfw/v3.3/glfw"
 
-	"github.com/noxworld-dev/opennox-lib/client/keybind"
+	"github.com/opennox/libs/client/keybind"
 )
 
 var keymap = map[glfw.Key]keybind.Key{

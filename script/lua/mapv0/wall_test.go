@@ -7,10 +7,10 @@ import (
 
 	"github.com/shoenig/test/must"
 
-	"github.com/noxworld-dev/opennox-lib/wall"
+	"github.com/opennox/libs/wall"
 
-	"github.com/noxworld-dev/opennox-lib/script"
-	"github.com/noxworld-dev/opennox-lib/types"
+	"github.com/opennox/libs/script"
+	"github.com/opennox/libs/types"
 )
 
 type testWall struct {

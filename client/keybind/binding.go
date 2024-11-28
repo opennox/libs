@@ -3,7 +3,7 @@ package keybind
 import (
 	"strings"
 
-	"github.com/noxworld-dev/opennox-lib/strman"
+	"github.com/opennox/libs/strman"
 )
 
 type Event uint32

@@ -5,7 +5,7 @@ import (
 	"image"
 	"io"
 
-	"github.com/opennox/opennox-lib/binenc"
+	"github.com/opennox/libs/binenc"
 )
 
 func init() {

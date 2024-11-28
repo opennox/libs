@@ -7,8 +7,8 @@ import (
 	"io"
 	"math"
 
-	"github.com/opennox/opennox-lib/binenc"
-	"github.com/opennox/opennox-lib/xfer"
+	"github.com/opennox/libs/binenc"
+	"github.com/opennox/libs/xfer"
 )
 
 func init() {

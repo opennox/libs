@@ -7,8 +7,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/opennox/opennox-lib/ifs"
-	"github.com/opennox/opennox-lib/log"
+	"github.com/opennox/libs/ifs"
+	"github.com/opennox/libs/log"
 )
 
 var (

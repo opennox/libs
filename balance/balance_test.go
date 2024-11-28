@@ -5,7 +5,7 @@ import (
 
 	"github.com/shoenig/test/must"
 
-	"github.com/noxworld-dev/opennox-lib/noxtest"
+	"github.com/opennox/libs/noxtest"
 )
 
 func TestReadBalance(t *testing.T) {

@@ -5,8 +5,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/noxworld-dev/opennox-lib/client/keybind"
-	"github.com/noxworld-dev/opennox-lib/strman"
+	"github.com/opennox/libs/client/keybind"
+	"github.com/opennox/libs/strman"
 )
 
 type macro struct {

@@ -5,8 +5,8 @@ import (
 
 	"github.com/go-gl/gl/v3.3-core/gl"
 
-	"github.com/noxworld-dev/opennox-lib/client/seat"
-	"github.com/noxworld-dev/opennox-lib/noximage"
+	"github.com/opennox/libs/client/seat"
+	"github.com/opennox/libs/noximage"
 )
 
 func (win *Window) NewSurface(sz image.Point, filter bool) seat.Surface {

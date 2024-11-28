@@ -12,7 +12,7 @@ import (
 	"golang.org/x/image/font"
 	"golang.org/x/image/math/fixed"
 
-	"github.com/noxworld-dev/opennox-lib/noxtest"
+	"github.com/opennox/libs/noxtest"
 )
 
 func TestFonts(t *testing.T) {

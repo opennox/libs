@@ -3,7 +3,7 @@ package seat
 import (
 	"image"
 
-	"github.com/opennox/opennox-lib/noximage"
+	"github.com/opennox/libs/noximage"
 )
 
 const (

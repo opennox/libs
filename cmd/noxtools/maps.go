@@ -10,7 +10,7 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/exp/slices"
 
-	"github.com/opennox/opennox-lib/maps"
+	"github.com/opennox/libs/maps"
 )
 
 func init() {

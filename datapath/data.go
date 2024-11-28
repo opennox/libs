@@ -7,7 +7,7 @@ import (
 	"runtime"
 	"sync"
 
-	"github.com/noxworld-dev/opennox-lib/ifs"
+	"github.com/opennox/libs/ifs"
 )
 
 var datadir struct {

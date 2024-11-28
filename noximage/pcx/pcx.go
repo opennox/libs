@@ -9,7 +9,7 @@ import (
 	"image/draw"
 	"io"
 
-	noxcolor "github.com/noxworld-dev/opennox-lib/color"
+	noxcolor "github.com/opennox/libs/color"
 )
 
 var (

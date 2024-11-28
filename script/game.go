@@ -5,7 +5,7 @@ import (
 	"image"
 	"time"
 
-	"github.com/noxworld-dev/opennox-lib/types"
+	"github.com/opennox/libs/types"
 )
 
 var global Game = BaseGame{}

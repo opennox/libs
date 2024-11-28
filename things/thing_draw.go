@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/noxworld-dev/opennox-lib/player"
+	"github.com/opennox/libs/player"
 )
 
 type Draw interface {

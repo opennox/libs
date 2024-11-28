@@ -15,7 +15,7 @@ require (
 	github.com/opennox/noxscript/ns v1.0.2
 	github.com/opennox/noxscript/ns/v3 v3.4.4
 	github.com/opennox/noxscript/ns/v4 v4.21.0
-	github.com/opennox/opennox-lib v0.0.0-20241123120020-91bcfed162f2
+	github.com/opennox/libs v0.0.0-20241123120020-91bcfed162f2
 	github.com/shoenig/test v1.12.0
 	github.com/spf13/cobra v1.8.1
 	github.com/traefik/yaegi v0.16.2-0.20240730175404-e686f55767b9

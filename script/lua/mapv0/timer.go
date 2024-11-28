@@ -6,7 +6,7 @@ import (
 	ns4 "github.com/noxworld-dev/noxscript/ns/v4"
 	lua "github.com/yuin/gopher-lua"
 
-	"github.com/noxworld-dev/opennox-lib/script"
+	"github.com/opennox/libs/script"
 )
 
 type metaTimer struct {

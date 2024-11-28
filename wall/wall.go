@@ -3,9 +3,9 @@ package wall
 import (
 	"image"
 
-	"github.com/opennox/opennox-lib/common"
-	"github.com/opennox/opennox-lib/enum"
-	"github.com/opennox/opennox-lib/types"
+	"github.com/opennox/libs/common"
+	"github.com/opennox/libs/enum"
+	"github.com/opennox/libs/types"
 )
 
 const GridStep = common.GridStep

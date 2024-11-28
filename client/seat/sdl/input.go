@@ -6,8 +6,8 @@ import (
 
 	"github.com/veandco/go-sdl2/sdl"
 
-	"github.com/noxworld-dev/opennox-lib/client/seat"
-	"github.com/noxworld-dev/opennox-lib/types"
+	"github.com/opennox/libs/client/seat"
+	"github.com/opennox/libs/types"
 )
 
 func (win *Window) ReplaceInputs(cfg seat.InputConfig) seat.InputConfig {

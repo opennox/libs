@@ -3,8 +3,8 @@ package seat
 import (
 	"image"
 
-	"github.com/noxworld-dev/opennox-lib/types"
-	"github.com/opennox/opennox-lib/client/keybind"
+	"github.com/opennox/libs/client/keybind"
+	"github.com/opennox/libs/types"
 )
 
 type InputConfig []func(ev InputEvent)

@@ -6,13 +6,13 @@ import (
 	"image"
 	"io"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
-	"regexp"
 
-	"github.com/noxworld-dev/opennox-lib/log"
-	"github.com/noxworld-dev/opennox-lib/strman"
-	"github.com/noxworld-dev/opennox-lib/types"
+	"github.com/opennox/libs/log"
+	"github.com/opennox/libs/strman"
+	"github.com/opennox/libs/types"
 )
 
 var (

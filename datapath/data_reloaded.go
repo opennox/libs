@@ -1,6 +1,6 @@
 package datapath
 
-import "github.com/noxworld-dev/opennox-lib/log"
+import "github.com/opennox/libs/log"
 
 var reloadedLog = log.New("reloaded")
 

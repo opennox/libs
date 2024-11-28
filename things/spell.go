@@ -10,8 +10,8 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/noxworld-dev/opennox-lib/spell"
-	"github.com/noxworld-dev/opennox-lib/strman"
+	"github.com/opennox/libs/spell"
+	"github.com/opennox/libs/strman"
 )
 
 var (

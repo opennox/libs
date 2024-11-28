@@ -4,7 +4,7 @@ package console
 import (
 	"context"
 
-	"github.com/noxworld-dev/opennox-lib/strman"
+	"github.com/opennox/libs/strman"
 )
 
 var secretChars = `0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz`

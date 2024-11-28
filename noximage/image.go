@@ -4,7 +4,7 @@ import (
 	"image"
 	"image/color"
 
-	noxcolor "github.com/noxworld-dev/opennox-lib/color"
+	noxcolor "github.com/opennox/libs/color"
 )
 
 var _ image.Image = &Image16{}

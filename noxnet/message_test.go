@@ -11,8 +11,8 @@ import (
 
 	"github.com/shoenig/test/must"
 
-	"github.com/noxworld-dev/opennox-lib/binenc"
-	"github.com/noxworld-dev/opennox-lib/noxnet/netxfer"
+	"github.com/opennox/libs/binenc"
+	"github.com/opennox/libs/noxnet/netxfer"
 )
 
 func TestDecodePacket(t *testing.T) {

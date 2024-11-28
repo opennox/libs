@@ -5,7 +5,7 @@ import (
 	"errors"
 	"io"
 
-	"github.com/noxworld-dev/opennox-lib/binenc"
+	"github.com/opennox/libs/binenc"
 )
 
 func init() {

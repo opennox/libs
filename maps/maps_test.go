@@ -12,9 +12,9 @@ import (
 	"github.com/opennox/noxscript/ns/asm"
 	"github.com/shoenig/test/must"
 
-	"github.com/opennox/opennox-lib/ifs"
-	"github.com/opennox/opennox-lib/maps"
-	"github.com/opennox/opennox-lib/noxtest"
+	"github.com/opennox/libs/ifs"
+	"github.com/opennox/libs/maps"
+	"github.com/opennox/libs/noxtest"
 )
 
 var casesMapInfo = []maps.Info{

@@ -1,7 +1,7 @@
 package noxnet
 
 import (
-	"github.com/noxworld-dev/opennox-lib/noxnet/netxfer"
+	"github.com/opennox/libs/noxnet/netxfer"
 )
 
 func init() {

@@ -12,7 +12,7 @@ import (
 
 	"github.com/shoenig/test/must"
 
-	"github.com/noxworld-dev/opennox-lib/datapath"
+	"github.com/opennox/libs/datapath"
 )
 
 func DataPath(t testing.TB, sub ...string) string {

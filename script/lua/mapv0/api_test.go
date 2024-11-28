@@ -8,9 +8,9 @@ import (
 	"github.com/shoenig/test/must"
 	glua "github.com/yuin/gopher-lua"
 
-	"github.com/noxworld-dev/opennox-lib/script"
-	"github.com/noxworld-dev/opennox-lib/script/lua"
-	"github.com/noxworld-dev/opennox-lib/script/lua/mapv0"
+	"github.com/opennox/libs/script"
+	"github.com/opennox/libs/script/lua"
+	"github.com/opennox/libs/script/lua/mapv0"
 )
 
 func newGame(t testing.TB) *testGame {

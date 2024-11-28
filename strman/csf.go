@@ -9,7 +9,7 @@ import (
 
 	"golang.org/x/text/encoding/charmap"
 
-	"github.com/noxworld-dev/opennox-lib/ifs"
+	"github.com/opennox/libs/ifs"
 )
 
 func (sm *StringManager) ReadCSF(path string) error {

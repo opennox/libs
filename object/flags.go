@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"strings"
 
-	"github.com/noxworld-dev/opennox-lib/enum"
+	"github.com/opennox/libs/enum"
 )
 
 var FlagsNames = []string{
