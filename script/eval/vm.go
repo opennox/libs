@@ -12,11 +12,11 @@ import (
 
 	"github.com/traefik/yaegi/interp"
 
-	eudeval "github.com/noxworld-dev/noxscript/eud/v171/eval"
-	nseval3 "github.com/noxworld-dev/noxscript/ns/v3/eval"
-	ns3vm "github.com/noxworld-dev/noxscript/ns/v3/vm"
-	ns4 "github.com/noxworld-dev/noxscript/ns/v4"
-	nseval4 "github.com/noxworld-dev/noxscript/ns/v4/eval"
+	eudeval "github.com/opennox/noxscript/eud/v171/eval"
+	nseval3 "github.com/opennox/noxscript/ns/v3/eval"
+	ns3vm "github.com/opennox/noxscript/ns/v3/vm"
+	ns4 "github.com/opennox/noxscript/ns/v4"
+	nseval4 "github.com/opennox/noxscript/ns/v4/eval"
 
 	"github.com/opennox/libs/script"
 	"github.com/opennox/libs/script/eval/imports"
@@ -289,9 +289,9 @@ import (
 	"github.com/opennox/libs/object"
 	"github.com/opennox/libs/script"
 
-	ns3 "github.com/noxworld-dev/noxscript/ns/v3"
-	ns4 "github.com/noxworld-dev/noxscript/ns/v4"
-	eud "github.com/noxworld-dev/noxscript/eud/v171"
+	ns3 "github.com/opennox/noxscript/ns/v3"
+	ns4 "github.com/opennox/noxscript/ns/v4"
+	eud "github.com/opennox/noxscript/eud/v171"
 )
 
 var Game = script.Runtime()

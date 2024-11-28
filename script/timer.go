@@ -3,7 +3,7 @@ package script
 import (
 	"time"
 
-	ns4 "github.com/noxworld-dev/noxscript/ns/v4"
+	ns4 "github.com/opennox/noxscript/ns/v4"
 )
 
 func Frames(num int) ns4.Duration {

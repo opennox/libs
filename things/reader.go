@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/noxworld-dev/noxcrypt"
+	"github.com/opennox/noxcrypt"
 
 	"github.com/opennox/libs/ifs"
 )

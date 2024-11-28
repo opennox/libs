@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	ns4 "github.com/noxworld-dev/noxscript/ns/v4"
+	ns4 "github.com/opennox/noxscript/ns/v4"
 	"github.com/shoenig/test/must"
 
 	"github.com/opennox/libs/script"

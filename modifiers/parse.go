@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	crypt "github.com/noxworld-dev/noxcrypt"
+	crypt "github.com/opennox/noxcrypt"
 
 	"github.com/opennox/libs/ifs"
 )

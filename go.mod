@@ -11,11 +11,10 @@ require (
 	github.com/icza/bitio v1.1.0
 	github.com/julienschmidt/httprouter v1.3.0
 	github.com/opennox/noxcrypt v0.1.0
-	github.com/opennox/noxscript/eud/v171 v171.3.1
-	github.com/opennox/noxscript/ns v1.0.2
-	github.com/opennox/noxscript/ns/v3 v3.4.4
-	github.com/opennox/noxscript/ns/v4 v4.21.0
-	github.com/opennox/libs v0.0.0-20241123120020-91bcfed162f2
+	github.com/opennox/noxscript/eud/v171 v171.3.2
+	github.com/opennox/noxscript/ns v1.0.3
+	github.com/opennox/noxscript/ns/v3 v3.4.5
+	github.com/opennox/noxscript/ns/v4 v4.21.1
 	github.com/shoenig/test v1.12.0
 	github.com/spf13/cobra v1.8.1
 	github.com/traefik/yaegi v0.16.2-0.20240730175404-e686f55767b9
@@ -32,6 +31,5 @@ require (
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
-	github.com/stretchr/testify v1.10.0 // indirect
 	golang.org/x/crypto v0.29.0 // indirect
 )

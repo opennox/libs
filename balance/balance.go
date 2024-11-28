@@ -13,7 +13,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/noxworld-dev/noxcrypt"
+	"github.com/opennox/noxcrypt"
 
 	"github.com/opennox/libs/ifs"
 )

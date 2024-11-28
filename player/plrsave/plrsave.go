@@ -7,7 +7,7 @@ import (
 	"io"
 	"reflect"
 
-	crypt "github.com/noxworld-dev/noxcrypt"
+	crypt "github.com/opennox/noxcrypt"
 )
 
 // Section is a common interface for player save file sections.

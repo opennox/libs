@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"reflect"
 
-	ns4 "github.com/noxworld-dev/noxscript/ns/v4"
+	ns4 "github.com/opennox/noxscript/ns/v4"
 	lua "github.com/yuin/gopher-lua"
 
 	"github.com/opennox/libs/script"

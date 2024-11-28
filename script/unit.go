@@ -3,7 +3,7 @@ package script
 import (
 	"fmt"
 
-	ns4 "github.com/noxworld-dev/noxscript/ns/v4"
+	ns4 "github.com/opennox/noxscript/ns/v4"
 
 	"github.com/opennox/libs/spell"
 	"github.com/opennox/libs/types"

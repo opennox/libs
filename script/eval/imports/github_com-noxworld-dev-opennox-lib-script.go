@@ -7,11 +7,11 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/noxworld-dev/noxscript/ns/v4"
 	"github.com/opennox/libs/object"
 	"github.com/opennox/libs/script"
 	"github.com/opennox/libs/spell"
 	"github.com/opennox/libs/types"
+	
 )
 
 func init() {
