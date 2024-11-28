@@ -9,7 +9,7 @@ import (
 
 	"github.com/shoenig/test/must"
 
-	"github.com/noxworld-dev/opennox-lib/noxtest"
+	"github.com/opennox/opennox-lib/noxtest"
 )
 
 func TestParseConfig(t *testing.T) {

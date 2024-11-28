@@ -7,9 +7,9 @@ import (
 
 	"github.com/shoenig/test/must"
 
-	"github.com/noxworld-dev/opennox-lib/maps"
-	"github.com/noxworld-dev/opennox-lib/maps/maprender"
-	"github.com/noxworld-dev/opennox-lib/noxtest"
+	"github.com/opennox/opennox-lib/maps"
+	"github.com/opennox/opennox-lib/maps/maprender"
+	"github.com/opennox/opennox-lib/noxtest"
 )
 
 var casesMapDraw = []struct {

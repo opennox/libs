@@ -6,7 +6,7 @@ import (
 	"image"
 	"io"
 
-	crypt "github.com/noxworld-dev/noxcrypt"
+	crypt "github.com/opennox/noxcrypt"
 )
 
 type Writer struct {

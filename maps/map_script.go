@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/noxworld-dev/noxscript/ns/asm"
+	"github.com/opennox/noxscript/ns/asm"
 
-	"github.com/noxworld-dev/opennox-lib/binenc"
+	"github.com/opennox/opennox-lib/binenc"
 )
 
 func init() {

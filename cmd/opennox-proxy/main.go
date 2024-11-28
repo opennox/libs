@@ -11,8 +11,8 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/noxworld-dev/opennox-lib/log"
-	"github.com/noxworld-dev/opennox-lib/noxnet"
+	"github.com/opennox/opennox-lib/log"
+	"github.com/opennox/opennox-lib/noxnet"
 )
 
 //go:generate d2 diagram.d2 diagram.svg

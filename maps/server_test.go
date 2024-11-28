@@ -11,8 +11,8 @@ import (
 
 	"github.com/shoenig/test/must"
 
-	"github.com/noxworld-dev/opennox-lib/ifs"
-	"github.com/noxworld-dev/opennox-lib/noxtest"
+	"github.com/opennox/opennox-lib/ifs"
+	"github.com/opennox/opennox-lib/noxtest"
 )
 
 func TestIsAllowedFile(t *testing.T) {

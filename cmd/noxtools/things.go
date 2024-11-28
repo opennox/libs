@@ -7,7 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/noxworld-dev/opennox-lib/things"
+	"github.com/opennox/opennox-lib/things"
 )
 
 func init() {

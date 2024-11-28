@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/noxworld-dev/opennox-lib/noximage/pcx"
-	"github.com/noxworld-dev/opennox-lib/nxz"
+	"github.com/opennox/opennox-lib/noximage/pcx"
+	"github.com/opennox/opennox-lib/nxz"
 )
 
 // Decompress video.bag file and update video.idx.

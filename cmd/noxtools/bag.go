@@ -25,9 +25,9 @@ import (
 	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
 
-	"github.com/noxworld-dev/opennox-lib/bag"
-	"github.com/noxworld-dev/opennox-lib/noximage/pcx"
-	"github.com/noxworld-dev/opennox-lib/things"
+	"github.com/opennox/opennox-lib/bag"
+	"github.com/opennox/opennox-lib/noximage/pcx"
+	"github.com/opennox/opennox-lib/things"
 )
 
 func init() {

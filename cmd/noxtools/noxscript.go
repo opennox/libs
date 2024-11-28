@@ -12,11 +12,11 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/noxworld-dev/noxscript/ns/asm"
-	nscmd "github.com/noxworld-dev/noxscript/ns/v3/cmd"
-	"github.com/noxworld-dev/noxscript/ns/v3/noxast"
+	"github.com/opennox/noxscript/ns/asm"
+	nscmd "github.com/opennox/noxscript/ns/v3/cmd"
+	"github.com/opennox/noxscript/ns/v3/noxast"
 
-	"github.com/noxworld-dev/opennox-lib/maps"
+	"github.com/opennox/opennox-lib/maps"
 )
 
 func init() {

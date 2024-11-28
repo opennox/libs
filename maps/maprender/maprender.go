@@ -7,11 +7,11 @@ import (
 	"image/draw"
 	"path/filepath"
 
-	"github.com/noxworld-dev/opennox-lib/bag"
-	"github.com/noxworld-dev/opennox-lib/common"
-	"github.com/noxworld-dev/opennox-lib/maps"
-	"github.com/noxworld-dev/opennox-lib/noximage/pcx"
 	"github.com/noxworld-dev/opennox-lib/things"
+	"github.com/opennox/opennox-lib/bag"
+	"github.com/opennox/opennox-lib/common"
+	"github.com/opennox/opennox-lib/maps"
+	"github.com/opennox/opennox-lib/noximage/pcx"
 )
 
 // DrawMap is a helper for drawing a single map. For multiple maps it's more efficient to use Renderer.

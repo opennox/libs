@@ -10,7 +10,7 @@ import (
 
 	"golang.org/x/exp/slices"
 
-	"github.com/noxworld-dev/opennox-lib/binenc"
+	"github.com/opennox/opennox-lib/binenc"
 )
 
 const (

@@ -6,7 +6,7 @@ import (
 	"image/color"
 	"image/draw"
 
-	"github.com/noxworld-dev/opennox-lib/maps"
+	"github.com/opennox/opennox-lib/maps"
 )
 
 func fillImage(img draw.Image, c color.Color) {

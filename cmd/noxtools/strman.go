@@ -7,7 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/noxworld-dev/opennox-lib/strman"
+	"github.com/opennox/opennox-lib/strman"
 )
 
 func init() {

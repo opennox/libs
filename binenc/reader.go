@@ -8,7 +8,7 @@ import (
 	"math"
 	"unicode/utf16"
 
-	"github.com/noxworld-dev/opennox-lib/types"
+	"github.com/opennox/opennox-lib/types"
 )
 
 func NewReader(data []byte) *Reader {

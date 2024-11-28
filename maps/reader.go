@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/noxworld-dev/noxcrypt"
+	"github.com/opennox/noxcrypt"
 
-	"github.com/noxworld-dev/opennox-lib/binenc"
+	"github.com/opennox/opennox-lib/binenc"
 )
 
 type Reader struct {

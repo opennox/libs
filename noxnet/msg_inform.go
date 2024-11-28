@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/noxworld-dev/opennox-lib/binenc"
+	"github.com/opennox/opennox-lib/binenc"
 )
 
 func init() {

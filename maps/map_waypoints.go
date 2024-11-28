@@ -6,8 +6,8 @@ import (
 	"io"
 	"math"
 
-	"github.com/noxworld-dev/opennox-lib/binenc"
-	"github.com/noxworld-dev/opennox-lib/types"
+	"github.com/opennox/opennox-lib/binenc"
+	"github.com/opennox/opennox-lib/types"
 )
 
 func init() {

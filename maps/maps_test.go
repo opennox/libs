@@ -8,13 +8,13 @@ import (
 	"strings"
 	"testing"
 
-	crypt "github.com/noxworld-dev/noxcrypt"
-	"github.com/noxworld-dev/noxscript/ns/asm"
+	crypt "github.com/opennox/noxcrypt"
+	"github.com/opennox/noxscript/ns/asm"
 	"github.com/shoenig/test/must"
 
-	"github.com/noxworld-dev/opennox-lib/ifs"
-	"github.com/noxworld-dev/opennox-lib/maps"
-	"github.com/noxworld-dev/opennox-lib/noxtest"
+	"github.com/opennox/opennox-lib/ifs"
+	"github.com/opennox/opennox-lib/maps"
+	"github.com/opennox/opennox-lib/noxtest"
 )
 
 var casesMapInfo = []maps.Info{

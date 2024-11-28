@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/noxworld-dev/opennox-lib/binenc"
+	"github.com/opennox/opennox-lib/binenc"
 )
 
 // Type is a decoding type for XFER data.
