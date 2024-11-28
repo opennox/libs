@@ -11,10 +11,10 @@ require (
 	github.com/icza/bitio v1.1.0
 	github.com/julienschmidt/httprouter v1.3.0
 	github.com/opennox/noxcrypt v0.1.0
-	github.com/opennox/noxscript/eud/v171 v171.3.2
+	github.com/opennox/noxscript/eud/v171 v171.3.3
 	github.com/opennox/noxscript/ns v1.0.3
-	github.com/opennox/noxscript/ns/v3 v3.4.5
-	github.com/opennox/noxscript/ns/v4 v4.21.1
+	github.com/opennox/noxscript/ns/v3 v3.4.6
+	github.com/opennox/noxscript/ns/v4 v4.21.2
 	github.com/shoenig/test v1.12.0
 	github.com/spf13/cobra v1.8.1
 	github.com/traefik/yaegi v0.16.2-0.20240730175404-e686f55767b9
