@@ -132,7 +132,7 @@ func (s *Server) Reset() {
 	s.Port.Reset()
 }
 
-func (s *Server) handleMsg(conn *Conn, sid StreamID, m Message) bool {
+func (s *Server) handleMsg(conn *Conn, sid StreamID, m Message, flags PacketFlags) bool {
 	srv := conn.WithID(ServerStreamID)
 	switch sid {
 	default:

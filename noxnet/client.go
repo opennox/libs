@@ -87,7 +87,7 @@ func (c *Client) SetServerAddr(addr netip.AddrPort) {
 	}
 }
 
-func (c *Client) handleMsg(conn *Conn, sid StreamID, m Message) bool {
+func (c *Client) handleMsg(conn *Conn, sid StreamID, m Message, flags PacketFlags) bool {
 	c.smu.RLock()
 	port := c.port
 	c.smu.RUnlock()

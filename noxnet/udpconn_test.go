@@ -45,7 +45,7 @@ func TestStream(t *testing.T) {
 
 		srvRecv := make(chan Message, maxMessages)
 		srv := srvC.Port
-		srv.OnMessage(func(conn *Conn, sid StreamID, m Message) bool {
+		srv.OnMessage(func(conn *Conn, sid StreamID, m Message, flags PacketFlags) bool {
 			if debug {
 				t.Logf("server recv: %#v", m)
 			}
@@ -58,7 +58,7 @@ func TestStream(t *testing.T) {
 		t.Cleanup(srv.Close)
 
 		cli := cliC.Port
-		cli.OnMessage(func(conn *Conn, sid StreamID, m Message) bool {
+		cli.OnMessage(func(conn *Conn, sid StreamID, m Message, flags PacketFlags) bool {
 			if debug {
 				t.Logf("client recv: %#v", m)
 			}

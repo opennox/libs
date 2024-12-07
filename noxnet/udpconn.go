@@ -61,7 +61,7 @@ func (f *onMessageFuncs) Add(fnc OnMessageFunc) {
 	f.funcs = append(f.funcs, fnc)
 }
 
-func (f *onMessageFuncs) Call(conn *Conn, sid StreamID, m Message) bool {
+func (f *onMessageFuncs) Call(conn *Conn, sid StreamID, m Message, flags PacketFlags) bool {
 	if f == nil {
 		return false
 	}
@@ -69,7 +69,7 @@ func (f *onMessageFuncs) Call(conn *Conn, sid StreamID, m Message) bool {
 	list := f.funcs
 	f.mu.RUnlock()
 	for _, fnc := range list {
-		if fnc(conn, sid, m) {
+		if fnc(conn, sid, m, flags) {
 			return true
 		}
 	}
@@ -77,8 +77,17 @@ func (f *onMessageFuncs) Call(conn *Conn, sid StreamID, m Message) bool {
 }
 
 type StreamID byte
+type PacketFlags byte
 
-type OnMessageFunc func(conn *Conn, sid StreamID, m Message) bool
+func (f PacketFlags) Has(f2 PacketFlags) bool {
+	return f&f2 != 0
+}
+
+const (
+	PacketReliable = PacketFlags(1 << iota)
+)
+
+type OnMessageFunc func(conn *Conn, sid StreamID, m Message, flags PacketFlags) bool
 
 func NewPort(log *slog.Logger, conn PacketConn, isServer bool) *Port {
 	if log == nil {
@@ -384,6 +393,10 @@ func (p *Conn) handlePacket(data []byte) {
 		done()
 	}
 
+	var flags PacketFlags
+	if reliable {
+		flags |= PacketReliable
+	}
 	for len(data) > 0 {
 		m, n, err := DecodeAnyPacket(data)
 		if err != nil {
@@ -395,13 +408,13 @@ func (p *Conn) handlePacket(data []byte) {
 		if p.p.debug {
 			p.log.Debug("RECV", "type", reflect.TypeOf(m).String(), "msg", m)
 		}
-		if onMsgID.Call(p, sid, m) {
+		if onMsgID.Call(p, sid, m, flags) {
 			continue
 		}
-		if onMsg.Call(p, sid, m) {
+		if onMsg.Call(p, sid, m, flags) {
 			continue
 		}
-		if onMsgGlobal.Call(p, sid, m) {
+		if onMsgGlobal.Call(p, sid, m, flags) {
 			continue
 		}
 	}
