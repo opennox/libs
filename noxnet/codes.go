@@ -260,7 +260,6 @@ const (
 var opLen = map[Op]int{
 	MSG_INCOMING_CLIENT:                0,
 	MSG_CLIENT_READY:                   0,
-	MSG_NEW_PLAYER:                     128,
 	MSG_PLAYER_QUIT:                    2,
 	MSG_SIMPLE_OBJ:                     8,
 	MSG_DESTROY_OBJECT:                 2,

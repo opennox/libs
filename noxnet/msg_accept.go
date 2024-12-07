@@ -74,13 +74,10 @@ func (p *MsgServerAccept) Decode(data []byte) (int, error) {
 }
 
 type MsgClientAccept struct {
-	PlayerName  string // 0-65
-	PlayerClass byte   // 66
-	IsFemale    byte   // 67
-	Unk70       [29]byte
-	Screen      image.Point // 97-104
-	Serial      string      // 105-126
-	Unk129      [26]byte
+	PlayerInfo
+	Screen image.Point // 97-104
+	Serial string      // 105-126
+	Unk129 [26]byte
 }
 
 func (*MsgClientAccept) NetOp() Op {
@@ -95,10 +92,10 @@ func (p *MsgClientAccept) Encode(data []byte) (int, error) {
 	if len(data) < 153 {
 		return 0, io.ErrShortBuffer
 	}
-	binenc.CStringSet16(data[0:66], p.PlayerName)
-	data[66] = p.PlayerClass
-	data[67] = p.IsFemale
-	copy(data[68:97], p.Unk70[:])
+	_, err := p.PlayerInfo.Encode(data[0:97])
+	if err != nil {
+		return 0, err
+	}
 	binary.LittleEndian.PutUint32(data[97:101], uint32(p.Screen.X))
 	binary.LittleEndian.PutUint32(data[101:105], uint32(p.Screen.Y))
 	binenc.CStringSet(data[105:127], p.Serial)
@@ -110,10 +107,10 @@ func (p *MsgClientAccept) Decode(data []byte) (int, error) {
 	if len(data) < 153 {
 		return 0, io.ErrUnexpectedEOF
 	}
-	p.PlayerName = binenc.CString16(data[0:66])
-	p.PlayerClass = data[66]
-	p.IsFemale = data[67]
-	copy(p.Unk70[:], data[68:99])
+	_, err := p.PlayerInfo.Decode(data[0:97])
+	if err != nil {
+		return 0, err
+	}
 	p.Screen.X = int(binary.LittleEndian.Uint32(data[97:101]))
 	p.Screen.Y = int(binary.LittleEndian.Uint32(data[101:105]))
 	p.Serial = binenc.CString(data[105:127])
