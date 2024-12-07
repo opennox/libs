@@ -64,6 +64,11 @@ type RecordIn struct {
 	Data  string `json:"data"`
 }
 
+func isUnknown(m noxnet.Message) bool {
+	_, ok := m.(*noxnet.MsgUnknown)
+	return ok
+}
+
 func (r RecordIn) Decode() RecordOut {
 	o := RecordOut{
 		SrcID: r.SrcID,
@@ -107,7 +112,7 @@ func (r RecordIn) Decode() RecordOut {
 			sz = n + 1
 			lenOK = true
 		}
-		if m, n, err := noxnet.DecodeAnyPacket(data); err == nil && n > 0 {
+		if m, n, err := noxnet.DecodeAnyPacket(data); err == nil && n > 0 && !isUnknown(m) {
 			sz = n
 			v = m
 			lenOK = true
