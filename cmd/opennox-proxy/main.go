@@ -60,7 +60,7 @@ type Proxy struct {
 	enc   *json.Encoder
 
 	wmu sync.Mutex
-	lis net.PacketConn
+	lis *net.UDPConn
 
 	cmu     sync.RWMutex
 	clients map[netip.AddrPort]*clientPort
@@ -81,7 +81,14 @@ func (p *Proxy) Close() error {
 }
 
 func (p *Proxy) ListenAndServe(addr string) error {
-	lis, err := net.ListenPacket("udp4", addr)
+	ip, err := netip.ParseAddrPort(addr)
+	if err != nil {
+		return err
+	}
+	lis, err := net.ListenUDP("udp4", &net.UDPAddr{
+		IP:   ip.Addr().AsSlice(),
+		Port: int(ip.Port()),
+	})
 	if err != nil {
 		return err
 	}
@@ -89,16 +96,15 @@ func (p *Proxy) ListenAndServe(addr string) error {
 	return p.Serve(lis)
 }
 
-func (p *Proxy) Serve(lis net.PacketConn) error {
+func (p *Proxy) Serve(lis *net.UDPConn) error {
 	p.lis = lis
 	var buf [4096]byte
 	for {
-		n, a, err := lis.ReadFrom(buf[:])
+		n, addr, err := lis.ReadFromUDPAddrPort(buf[:])
 		if err != nil {
 			return err
 		}
 		data := buf[:n]
-		addr := getAddr(a)
 		p.sendAsClient(addr, data)
 	}
 }
@@ -173,11 +179,11 @@ type clientPort struct {
 	xor     uint32 // atomic
 
 	wmu sync.Mutex
-	lis net.PacketConn
+	lis *net.UDPConn
 }
 
 func (c *clientPort) listen(addr netip.Addr) error {
-	lis, err := net.ListenPacket("udp4", addr.String()+":0")
+	lis, err := net.ListenUDP("udp4", &net.UDPAddr{IP: addr.AsSlice()})
 	if err != nil {
 		return err
 	}
@@ -189,13 +195,12 @@ func (c *clientPort) listen(addr netip.Addr) error {
 func (c *clientPort) serve() {
 	var buf [4096]byte
 	for {
-		n, a, err := c.lis.ReadFrom(buf[:])
+		n, addr, err := c.lis.ReadFromUDPAddrPort(buf[:])
 		if err != nil {
 			log.Printf("client %v listener: %v", c.realCli, err)
 			return
 		}
 		data := buf[:n]
-		addr := getAddr(a)
 		if addr != c.p.realSrv {
 			log.Printf("???(%v) -> CP%d(%v): [%d]: %x", addr, c.id, c.lis.LocalAddr(), len(data), data)
 			continue
@@ -247,11 +252,41 @@ func (c *clientPort) interceptServer(data []byte) []byte {
 		}
 	} else if data[0] == 0x80 && data[1] == 0 {
 		switch noxnet.Op(data[2]) {
-		case noxnet.MSG_ACCEPTED:
+		case noxnet.MSG_SERVER_ACCEPT:
 			return modifyMessage(data, func(p *noxnet.MsgServerAccept) {
 				atomic.StoreUint32(&c.xor, uint32(p.XorKey))
 				p.XorKey = 0
 			})
+		case noxnet.MSG_ACCEPTED:
+			var accept noxnet.MsgAccept
+			left := data[2:]
+			n, err := accept.Decode(left[1:])
+			if err != nil {
+				return data
+			}
+			left = left[1+n:]
+
+			if len(left) == 0 || noxnet.Op(left[0]) != noxnet.MSG_SERVER_ACCEPT {
+				return data
+			}
+			var saccept noxnet.MsgServerAccept
+			n, err = saccept.Decode(left[1:])
+			if err != nil {
+				return data
+			}
+			atomic.StoreUint32(&c.xor, uint32(saccept.XorKey))
+			saccept.XorKey = 0
+
+			out := append([]byte{}, data[0], data[1])
+			out, err = noxnet.AppendPacket(out, &accept)
+			if err != nil {
+				return data
+			}
+			out, err = noxnet.AppendPacket(out, &saccept)
+			if err != nil {
+				return data
+			}
+			return out
 		}
 	}
 	return data
@@ -267,21 +302,6 @@ func (c *clientPort) SendToServer(data []byte) error {
 	defer c.wmu.Unlock()
 	_, err := c.lis.WriteTo(data, net.UDPAddrFromAddrPort(c.p.realSrv))
 	return err
-}
-
-func getAddr(addr net.Addr) netip.AddrPort {
-	switch a := addr.(type) {
-	case nil:
-	case interface{ AddrPort() netip.AddrPort }:
-		return a.AddrPort()
-	case *net.TCPAddr:
-		return a.AddrPort()
-	case *net.UDPAddr:
-		return a.AddrPort()
-	default:
-		log.Printf("unsupported address type: %T", a)
-	}
-	return netip.AddrPort{}
 }
 
 func xorData(key byte, p []byte) {
