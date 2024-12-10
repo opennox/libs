@@ -28,11 +28,26 @@ type RecvID byte
 type Chunk uint16
 type Error byte
 
+func (e Error) Error() string {
+	if int(e) < len(errTexts) {
+		if s := errTexts[e]; s != "" {
+			return "netxfer: " + s
+		}
+	}
+	return fmt.Sprintf("netxfer: unknown error (%d)", e)
+}
+
 const (
 	ErrClosed      = Error(1)
 	ErrSendTimeout = Error(2)
 	ErrRecvTimeout = Error(3)
 )
+
+var errTexts = []string{
+	ErrClosed:      "send cancelled",
+	ErrSendTimeout: "send timeout",
+	ErrRecvTimeout: "recv timeout",
+}
 
 type Msg interface {
 	XferOp() Op

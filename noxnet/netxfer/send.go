@@ -2,14 +2,15 @@ package netxfer
 
 import (
 	"slices"
+	"time"
 
 	"github.com/opennox/libs/binenc"
 )
 
 const (
-	sendFree     = sendState(0)
-	sendStarted  = sendState(1)
-	sendAccepted = sendState(2)
+	sendClosed = sendState(iota)
+	sendStarted
+	sendAccepted
 )
 
 type DoneFunc func()
@@ -20,14 +21,16 @@ type sendState byte
 type sendChunk struct {
 	ind      Chunk
 	data     []byte
-	lastSent Timestamp
+	lastSent time.Duration
 	retries  uint16
 	next     *sendChunk
 	prev     *sendChunk
 }
 
 type sendStream[C Conn] struct {
+	x         *Sender[C]
 	conn      C
+	id        SendID
 	recvID    RecvID
 	state     sendState
 	size      int
@@ -41,17 +44,41 @@ type sendStream[C Conn] struct {
 	onAbort   AbortFunc
 }
 
-func (p *sendStream[C]) Reset() {
-	*p = sendStream[C]{
-		state:     sendFree,
-		nextChunk: 1,
+func (p *sendStream[C]) Close() {
+	if p == nil || p.x == nil {
+		return
 	}
+	p.x.arr[p.id] = nil
+	p.x.active--
+	*p = sendStream[C]{}
 }
 
-func (p *sendStream[C]) Free() {
-	for it := p.first; it != nil; it = it.next {
-		*it = sendChunk{}
+func (p *sendStream[C]) Done() {
+	if p == nil || p.x == nil {
+		return
 	}
+	p.callDone()
+	p.Close()
+}
+
+func (p *sendStream[C]) Abort() {
+	if p == nil || p.x == nil {
+		return
+	}
+	p.callAborted()
+	p.Close()
+}
+
+func (p *sendStream[C]) Cancel(reason Error) {
+	if p.state != sendAccepted {
+		return
+	}
+	_ = p.conn.SendReliableMsg(&MsgCancel{
+		RecvID: p.recvID,
+		Reason: reason,
+	})
+	p.callAborted()
+	p.Close()
 }
 
 func (p *sendStream[C]) Ack(chunk Chunk) {
@@ -70,8 +97,86 @@ func (p *sendStream[C]) Ack(chunk Chunk) {
 			} else {
 				p.first = it.next
 			}
-			*it = sendChunk{}
+			*it = sendChunk{} // GC
 			return
+		}
+	}
+}
+
+func (p *sendStream[C]) Accept(rid RecvID) {
+	if p == nil || p.x == nil {
+		return
+	}
+	p.recvID = rid
+	p.state = sendAccepted
+}
+
+func (p *sendStream[C]) Start(d Data) {
+	p.state = sendStarted
+	p.action = d.Action
+	p.typ = d.Type
+	p.size = len(d.Data)
+	p.chunkCnt = (len(d.Data)-1)/blockSize + 1
+	p.nextChunk = 1
+	left := d.Data
+	for i := range p.chunkCnt {
+		b := &sendChunk{
+			ind: Chunk(i + 1),
+		}
+
+		n := blockSize
+		if len(left) <= n {
+			n = len(left)
+		}
+		b.data = slices.Clone(left[:n])
+		left = left[n:]
+
+		b.prev, b.next = p.last, nil
+		if prev := p.last; prev != nil {
+			prev.next = b
+		} else {
+			p.first = b
+		}
+		p.last = b
+	}
+	_ = p.conn.SendReliableMsg(&MsgStart{
+		Act:    d.Action,
+		Size:   uint32(len(d.Data)),
+		Type:   binenc.String{Value: d.Type},
+		SendID: p.id,
+	})
+}
+
+func (p *sendStream[C]) Update(ts time.Duration) {
+	if p == nil || p.x == nil {
+		return
+	}
+	if p.state != sendAccepted {
+		return
+	}
+	for j, b := 0, p.first; j < 2 && b != nil; j, b = j+1, b.next {
+		if t := b.lastSent; t == 0 {
+			_ = p.conn.SendUnreliableMsg(&MsgData{
+				RecvID: p.recvID,
+				Token:  0,
+				Chunk:  b.ind,
+				Data:   b.data,
+			})
+			p.nextChunk++
+			b.lastSent = ts
+		} else if ts > t+retryInterval {
+			if b.retries >= maxRetries {
+				p.Cancel(ErrSendTimeout)
+				return
+			}
+			_ = p.conn.SendUnreliableMsg(&MsgData{
+				RecvID: p.recvID,
+				Token:  0,
+				Chunk:  b.ind,
+				Data:   b.data,
+			})
+			b.lastSent = ts
+			b.retries++
 		}
 	}
 }
@@ -89,28 +194,32 @@ func (p *sendStream[C]) callDone() {
 }
 
 type Sender[C Conn] struct {
-	arr    []sendStream[C]
-	cnt    int
+	arr    []*sendStream[C]
 	active int
 }
 
-func (x *Sender[C]) Init(n int) {
+func (x *Sender[C]) Reset(n int) {
 	if n < 0 {
 		n = minStreams
 	} else if n > maxStreams {
 		n = maxStreams
 	}
-	x.cnt = n
-	x.arr = make([]sendStream[C], n)
-	for i := 0; i < n; i++ {
-		x.arr[i].Reset()
-	}
+	x.arr = make([]*sendStream[C], n)
 	x.active = 0
 }
 
-func (x *Sender[C]) find(conn C, rid RecvID) *sendStream[C] {
-	for i := 0; i < x.cnt; i++ {
-		it := &x.arr[i]
+func (x *Sender[C]) getS(id SendID) *sendStream[C] {
+	if int(id) >= len(x.arr) {
+		return nil
+	}
+	return x.arr[id]
+}
+
+func (x *Sender[C]) getR(conn C, rid RecvID) *sendStream[C] {
+	for _, it := range x.arr {
+		if it == nil || it.state != sendAccepted {
+			continue
+		}
 		if it.conn == conn && it.recvID == rid {
 			return it
 		}
@@ -119,171 +228,73 @@ func (x *Sender[C]) find(conn C, rid RecvID) *sendStream[C] {
 }
 
 func (x *Sender[C]) HandleAccept(conn C, m *MsgAccept) {
-	id := m.SendID
-	if int(id) >= x.cnt {
-		return
-	}
-	p := &x.arr[id]
-	p.recvID = m.RecvID
-	p.state = sendAccepted
+	x.getS(m.SendID).Accept(m.RecvID)
 }
 
 func (x *Sender[C]) HandleAck(conn C, m *MsgAck) {
-	x.find(conn, m.RecvID).Ack(m.Chunk)
+	x.getR(conn, m.RecvID).Ack(m.Chunk)
 }
 
 func (x *Sender[C]) HandleDone(conn C, m *MsgDone) {
-	p := x.find(conn, m.RecvID)
-	if p == nil {
-		return
-	}
-	p.callDone()
-	x.active--
-	p.Reset()
+	x.getR(conn, m.RecvID).Done()
 }
 
 func (x *Sender[C]) HandleAbort(conn C, m *MsgAbort) {
-	p := x.find(conn, m.RecvID)
-	if p == nil {
-		return
+	x.getR(conn, m.RecvID).Abort()
+}
+
+func (x *Sender[C]) add(s *sendStream[C]) bool {
+	for i, it := range x.arr {
+		if it == nil {
+			x.arr[i] = s
+			x.active++
+			s.id = SendID(i)
+			return true
+		}
 	}
-	p.callAborted()
-	for it := p.first; it != nil; it = it.next {
-		*it = sendChunk{}
-	}
-	p.Reset()
+	return false
 }
 
 func (x *Sender[C]) Send(conn C, p Data, onDone DoneFunc, onAbort AbortFunc) bool {
-	if len(p.Data) == 0 {
+	s := &sendStream[C]{
+		x:       x,
+		conn:    conn,
+		recvID:  0,
+		size:    len(p.Data),
+		onDone:  onDone,
+		onAbort: onAbort,
+	}
+	if !x.add(s) {
 		return false
 	}
-	s, id := x.newStream()
-	if s == nil {
-		return false
-	}
-	x.active++
-	left := p.Data
-	blocks := (len(p.Data)-1)/blockSize + 1
-	for i := range blocks {
-		b := &sendChunk{
-			ind: Chunk(i + 1),
-		}
-
-		n := blockSize
-		if len(left) <= n {
-			n = len(left)
-		}
-		b.data = slices.Clone(left[:n])
-		left = left[n:]
-
-		b.prev, b.next = s.last, nil
-		if prev := s.last; prev != nil {
-			prev.next = b
-		} else {
-			s.first = b
-		}
-		s.last = b
-	}
-	s.conn = conn
-	s.recvID = 0
-	s.state = sendStarted
-	s.size = len(p.Data)
-	s.nextChunk = 1
-	s.chunkCnt = blocks
-	if p.Type != "" {
-		s.typ = p.Type
-	}
-	s.action = p.Action
-	s.onDone = onDone
-	s.onAbort = onAbort
-	_ = conn.SendReliableMsg(&MsgStart{
-		Act:    p.Action,
-		Size:   uint32(len(p.Data)),
-		Type:   binenc.String{Value: p.Type},
-		SendID: id,
-	})
+	s.Start(p)
 	return true
 }
 
 func (x *Sender[C]) Cancel(conn C) {
-	for i := 0; i < x.cnt; i++ {
-		it := &x.arr[i]
-		if it.state == sendAccepted && it.conn == conn {
-			x.cancel(it, ErrClosed)
+	for _, it := range x.arr {
+		if it == nil {
+			continue
+		}
+		if it.conn == conn {
+			it.Cancel(ErrClosed)
 		}
 	}
 }
 
-func (x *Sender[C]) newStream() (*sendStream[C], SendID) {
-	for i := 0; i < x.cnt; i++ {
-		it := &x.arr[i]
-		if it.state == sendFree && it.size == 0 {
-			return it, SendID(i)
-		}
-	}
-	return nil, 0
-}
-
-func (x *Sender[C]) Free() {
-	x.arr = nil
-}
-
-func (x *Sender[C]) Update(ts Timestamp) {
+func (x *Sender[C]) Update(ts time.Duration) {
 	if x.active == 0 {
 		return
 	}
-	if x.cnt <= 0 {
-		return
-	}
-	for i := 0; i < x.cnt; i++ {
-		s := &x.arr[i]
-		if s.state != sendAccepted {
+	for _, it := range x.arr {
+		if it == nil {
 			continue
 		}
-		for j, b := 0, s.first; j < 2 && b != nil; j, b = j+1, b.next {
-			if t := b.lastSent; t == 0 {
-				_ = s.conn.SendUnreliableMsg(&MsgData{
-					RecvID: s.recvID,
-					Token:  0,
-					Chunk:  b.ind,
-					Data:   b.data,
-				})
-				s.nextChunk++
-				b.lastSent = ts
-			} else if ts > t+retryInterval {
-				if b.retries < maxRetries {
-					_ = s.conn.SendUnreliableMsg(&MsgData{
-						RecvID: s.recvID,
-						Token:  0,
-						Chunk:  b.ind,
-						Data:   b.data,
-					})
-					b.lastSent = ts
-					b.retries++
-				} else if s.state == sendAccepted {
-					x.cancel(s, ErrSendTimeout)
-					break
-				}
-			}
-		}
+		it.Update(ts)
 	}
 }
 
-func (x *Sender[C]) cancel(s *sendStream[C], reason Error) {
-	_ = s.conn.SendReliableMsg(&MsgCancel{
-		RecvID: s.recvID,
-		Reason: reason,
-	})
-	s.callAborted()
-	s.Free()
-	s.Reset()
-	if x.active != 0 {
-		x.active--
-	}
-}
-
-func (x *Sender[C]) Handle(conn C, ts Timestamp, m Msg) {
+func (x *Sender[C]) Handle(conn C, ts time.Duration, m Msg) {
 	switch m := m.(type) {
 	case *MsgAccept:
 		x.HandleAccept(conn, m)
