@@ -5,12 +5,13 @@ import (
 	"io"
 
 	"github.com/opennox/libs/binenc"
+	"github.com/opennox/libs/noxnet/netmsg"
 )
 
 func init() {
-	RegisterMessage(&MsgServerTryJoin{}, false)
-	RegisterMessage(&MsgJoinOK{}, false)
-	RegisterMessage(&MsgConnect{}, false)
+	netmsg.Register(&MsgServerTryJoin{}, false)
+	netmsg.Register(&MsgJoinOK{}, false)
+	netmsg.Register(&MsgConnect{}, false)
 }
 
 type MsgServerTryJoin struct {
@@ -26,8 +27,8 @@ type MsgServerTryJoin struct {
 	Unk96       byte     // 96
 }
 
-func (*MsgServerTryJoin) NetOp() Op {
-	return MSG_SERVER_TRY_JOIN
+func (*MsgServerTryJoin) NetOp() netmsg.Op {
+	return netmsg.MSG_SERVER_TRY_JOIN
 }
 
 func (*MsgServerTryJoin) EncodeSize() int {
@@ -67,8 +68,8 @@ func (p *MsgServerTryJoin) Decode(data []byte) (int, error) {
 type MsgJoinOK struct {
 }
 
-func (*MsgJoinOK) NetOp() Op {
-	return MSG_SERVER_JOIN_OK
+func (*MsgJoinOK) NetOp() netmsg.Op {
+	return netmsg.MSG_SERVER_JOIN_OK
 }
 
 func (*MsgJoinOK) EncodeSize() int {
@@ -86,8 +87,8 @@ func (p *MsgJoinOK) Decode(data []byte) (int, error) {
 type MsgConnect struct {
 }
 
-func (*MsgConnect) NetOp() Op {
-	return MSG_SERVER_CONNECT
+func (*MsgConnect) NetOp() netmsg.Op {
+	return netmsg.MSG_SERVER_CONNECT
 }
 
 func (*MsgConnect) EncodeSize() int {

@@ -13,6 +13,8 @@ import (
 
 	"github.com/opennox/libs/log"
 	"github.com/opennox/libs/noxnet"
+	"github.com/opennox/libs/noxnet/discover"
+	"github.com/opennox/libs/noxnet/netmsg"
 )
 
 //go:generate d2 diagram.d2 diagram.svg
@@ -220,7 +222,7 @@ func (c *clientPort) serve() {
 	}
 }
 
-func modifyMessage[T noxnet.Message](data []byte, fnc func(p T)) []byte {
+func modifyMessage[T netmsg.Message](data []byte, fnc func(p T)) []byte {
 	var zero T
 	msg := reflect.New(reflect.TypeOf(zero).Elem()).Interface().(T)
 	_, err := msg.Decode(data[3:])
@@ -244,20 +246,20 @@ func (c *clientPort) interceptServer(data []byte) []byte {
 		return data
 	}
 	if data[0] == 0 && data[1] == 0 {
-		switch noxnet.Op(data[2]) {
-		case noxnet.MSG_SERVER_INFO:
-			return modifyMessage(data, func(p *noxnet.MsgServerInfo) {
+		switch netmsg.Op(data[2]) {
+		case netmsg.MSG_SERVER_INFO:
+			return modifyMessage(data, func(p *discover.MsgServerInfo) {
 				p.ServerName = "Proxy: " + p.ServerName
 			})
 		}
 	} else if data[0] == 0x80 && data[1] == 0 {
-		switch noxnet.Op(data[2]) {
-		case noxnet.MSG_SERVER_ACCEPT:
+		switch netmsg.Op(data[2]) {
+		case netmsg.MSG_SERVER_ACCEPT:
 			return modifyMessage(data, func(p *noxnet.MsgServerAccept) {
 				atomic.StoreUint32(&c.xor, uint32(p.XorKey))
 				p.XorKey = 0
 			})
-		case noxnet.MSG_ACCEPTED:
+		case netmsg.MSG_ACCEPTED:
 			var accept noxnet.MsgAccept
 			left := data[2:]
 			n, err := accept.Decode(left[1:])
@@ -266,7 +268,7 @@ func (c *clientPort) interceptServer(data []byte) []byte {
 			}
 			left = left[1+n:]
 
-			if len(left) == 0 || noxnet.Op(left[0]) != noxnet.MSG_SERVER_ACCEPT {
+			if len(left) == 0 || netmsg.Op(left[0]) != netmsg.MSG_SERVER_ACCEPT {
 				return data
 			}
 			var saccept noxnet.MsgServerAccept
@@ -278,11 +280,11 @@ func (c *clientPort) interceptServer(data []byte) []byte {
 			saccept.XorKey = 0
 
 			out := append([]byte{}, data[0], data[1])
-			out, err = noxnet.AppendPacket(out, &accept)
+			out, err = netmsg.Append(out, &accept)
 			if err != nil {
 				return data
 			}
-			out, err = noxnet.AppendPacket(out, &saccept)
+			out, err = netmsg.Append(out, &saccept)
 			if err != nil {
 				return data
 			}

@@ -6,10 +6,11 @@ import (
 	"io"
 
 	"github.com/opennox/libs/binenc"
+	"github.com/opennox/libs/noxnet/netmsg"
 )
 
 func init() {
-	RegisterMessage(&MsgInform{}, true)
+	netmsg.Register(&MsgInform{}, true)
 }
 
 type InformCode byte
@@ -43,8 +44,8 @@ type MsgInform struct {
 	Inform Inform
 }
 
-func (*MsgInform) NetOp() Op {
-	return MSG_INFORM
+func (*MsgInform) NetOp() netmsg.Op {
+	return netmsg.MSG_INFORM
 }
 
 func (m *MsgInform) EncodeSize() int {
@@ -103,7 +104,7 @@ func (m *MsgInform) Decode(data []byte) (int, error) {
 
 type Inform interface {
 	InformCode() InformCode
-	Encoded
+	binenc.Encoded
 }
 
 type InformPlayer struct {

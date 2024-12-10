@@ -32,11 +32,11 @@ func (p *recvStream[C]) AddChunk(ts time.Duration, m *MsgData) {
 		return
 	}
 	p.lastUpdate = ts
-	_ = p.conn.SendReliableMsg(&MsgAck{
+	_ = p.conn.SendReliableMsg(&MsgXfer{&MsgAck{
 		RecvID: p.id,
 		Token:  m.Token,
 		Chunk:  m.Chunk,
-	})
+	}})
 	if len(m.Data) == 0 {
 		return
 	}
@@ -114,10 +114,10 @@ func (p *recvStream[C]) Abort(reason Error) {
 	if p == nil || p.x == nil {
 		return
 	}
-	_ = p.conn.SendReliableMsg(&MsgAbort{
+	_ = p.conn.SendReliableMsg(&MsgXfer{&MsgAbort{
 		RecvID: p.id,
 		Reason: reason,
-	})
+	}})
 	p.Close()
 }
 
@@ -125,9 +125,9 @@ func (p *recvStream[C]) Done() {
 	if p == nil || p.x == nil {
 		return
 	}
-	_ = p.conn.SendReliableMsg(&MsgDone{
+	_ = p.conn.SendReliableMsg(&MsgXfer{&MsgDone{
 		RecvID: p.id,
-	})
+	}})
 	if p.x.onReceive != nil {
 		p.x.onReceive(p.conn, p.full)
 	}
@@ -138,10 +138,10 @@ func (p *recvStream[C]) Accept(sid SendID) {
 	if p == nil || p.x == nil {
 		return
 	}
-	_ = p.conn.SendReliableMsg(&MsgAccept{
+	_ = p.conn.SendReliableMsg(&MsgXfer{&MsgAccept{
 		RecvID: p.id,
 		SendID: sid,
-	})
+	}})
 	if len(p.full.Data) == 0 {
 		p.Done()
 	}

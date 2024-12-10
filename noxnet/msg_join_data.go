@@ -3,10 +3,12 @@ package noxnet
 import (
 	"encoding/binary"
 	"io"
+
+	"github.com/opennox/libs/noxnet/netmsg"
 )
 
 func init() {
-	RegisterMessage(&MsgJoinData{}, false)
+	netmsg.Register(&MsgJoinData{}, false)
 }
 
 type MsgJoinData struct {
@@ -14,8 +16,8 @@ type MsgJoinData struct {
 	Unk2    uint32
 }
 
-func (*MsgJoinData) NetOp() Op {
-	return MSG_JOIN_DATA
+func (*MsgJoinData) NetOp() netmsg.Op {
+	return netmsg.MSG_JOIN_DATA
 }
 
 func (*MsgJoinData) EncodeSize() int {

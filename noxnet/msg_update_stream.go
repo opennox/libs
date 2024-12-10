@@ -4,15 +4,17 @@ import (
 	"encoding/binary"
 	"image"
 	"io"
+
+	"github.com/opennox/libs/noxnet/netmsg"
 )
 
 const decodeUpdateStream = false
 
 func init() {
 	if decodeUpdateStream {
-		RegisterMessage(&MsgUpdateStream{}, true)
+		netmsg.Register(&MsgUpdateStream{}, true)
 	}
-	RegisterMessage(&MsgNewAlias{}, false)
+	netmsg.Register(&MsgNewAlias{}, false)
 }
 
 type MsgUpdateStream struct {
@@ -24,8 +26,8 @@ type MsgUpdateStream struct {
 	Objects []ObjectUpdate
 }
 
-func (*MsgUpdateStream) NetOp() Op {
-	return MSG_UPDATE_STREAM
+func (*MsgUpdateStream) NetOp() netmsg.Op {
+	return netmsg.MSG_UPDATE_STREAM
 }
 
 func (*MsgUpdateStream) EncodeSize() int {
@@ -188,8 +190,8 @@ type MsgNewAlias struct {
 	Deadline Timestamp
 }
 
-func (*MsgNewAlias) NetOp() Op {
-	return MSG_NEW_ALIAS
+func (*MsgNewAlias) NetOp() netmsg.Op {
+	return netmsg.MSG_NEW_ALIAS
 }
 
 func (*MsgNewAlias) EncodeSize() int {

@@ -8,7 +8,34 @@ import (
 	"math"
 
 	"github.com/opennox/libs/binenc"
+	"github.com/opennox/libs/noxnet/netmsg"
 )
+
+func init() {
+	netmsg.Register(&MsgXfer{}, true)
+}
+
+type MsgXfer struct {
+	Msg Msg
+}
+
+func (*MsgXfer) NetOp() netmsg.Op {
+	return netmsg.MSG_XFER_MSG
+}
+
+func (m *MsgXfer) EncodeSize() int {
+	return EncodeSize(m.Msg)
+}
+
+func (m *MsgXfer) Encode(data []byte) (int, error) {
+	return Encode(data, m.Msg)
+}
+
+func (m *MsgXfer) Decode(data []byte) (int, error) {
+	msg, n, err := Decode(data)
+	m.Msg = msg
+	return n, err
+}
 
 type Op byte
 
@@ -51,9 +78,7 @@ var errTexts = []string{
 
 type Msg interface {
 	XferOp() Op
-	EncodeSize() int
-	Encode(data []byte) (int, error)
-	Decode(data []byte) (int, error)
+	binenc.Encoded
 }
 
 type MsgStart struct {

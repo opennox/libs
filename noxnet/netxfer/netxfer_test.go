@@ -10,6 +10,7 @@ import (
 	"github.com/shoenig/test/must"
 
 	"github.com/opennox/libs/binenc"
+	"github.com/opennox/libs/noxnet/netmsg"
 )
 
 const tickStep = 10 * time.Millisecond
@@ -44,13 +45,15 @@ func (s *TestState) StartSend(p Data, onDone DoneFunc, onAbort AbortFunc) bool {
 	return ok
 }
 
-func (c *TestConn) SendReliableMsg(m Msg) error {
+func (c *TestConn) SendReliableMsg(p netmsg.Message) error {
+	m := p.(*MsgXfer).Msg
 	c.Buf = append(c.Buf, m)
 	c.Recv.Handle(c.Peer, c.s.TS, m)
 	return nil
 }
 
-func (c *TestConn) SendUnreliableMsg(m Msg) error {
+func (c *TestConn) SendUnreliableMsg(p netmsg.Message) error {
+	m := p.(*MsgXfer).Msg
 	c.Buf = append(c.Buf, m)
 	c.Recv.Handle(c.Peer, c.s.TS, m)
 	return nil

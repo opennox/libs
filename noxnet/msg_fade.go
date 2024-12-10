@@ -2,10 +2,12 @@ package noxnet
 
 import (
 	"io"
+
+	"github.com/opennox/libs/noxnet/netmsg"
 )
 
 func init() {
-	RegisterMessage(&MsgFadeBegin{}, false)
+	netmsg.Register(&MsgFadeBegin{}, false)
 }
 
 type MsgFadeBegin struct {
@@ -13,8 +15,8 @@ type MsgFadeBegin struct {
 	Menu byte
 }
 
-func (*MsgFadeBegin) NetOp() Op {
-	return MSG_FADE_BEGIN
+func (*MsgFadeBegin) NetOp() netmsg.Op {
+	return netmsg.MSG_FADE_BEGIN
 }
 
 func (*MsgFadeBegin) EncodeSize() int {

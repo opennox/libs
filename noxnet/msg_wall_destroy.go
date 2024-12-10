@@ -3,18 +3,20 @@ package noxnet
 import (
 	"encoding/binary"
 	"io"
+
+	"github.com/opennox/libs/noxnet/netmsg"
 )
 
 func init() {
-	RegisterMessage(&MsgWallDestroy{}, false)
+	netmsg.Register(&MsgWallDestroy{}, false)
 }
 
 type MsgWallDestroy struct {
 	ID uint16
 }
 
-func (*MsgWallDestroy) NetOp() Op {
-	return MSG_DESTROY_WALL
+func (*MsgWallDestroy) NetOp() netmsg.Op {
+	return netmsg.MSG_DESTROY_WALL
 }
 
 func (*MsgWallDestroy) EncodeSize() int {

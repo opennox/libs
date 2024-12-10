@@ -5,10 +5,11 @@ import (
 	"io"
 
 	"github.com/opennox/libs/binenc"
+	"github.com/opennox/libs/noxnet/netmsg"
 )
 
 func init() {
-	RegisterMessage(&MsgText{}, true)
+	netmsg.Register(&MsgText{}, true)
 }
 
 const (
@@ -38,8 +39,8 @@ type MsgText struct {
 	Data    []byte // max: 510
 }
 
-func (*MsgText) NetOp() Op {
-	return MSG_TEXT_MESSAGE
+func (*MsgText) NetOp() netmsg.Op {
+	return netmsg.MSG_TEXT_MESSAGE
 }
 
 func (p *MsgText) Text() string {

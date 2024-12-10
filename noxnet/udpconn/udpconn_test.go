@@ -1,4 +1,4 @@
-package noxnet
+package udpconn
 
 import (
 	"context"
@@ -7,6 +7,9 @@ import (
 	"time"
 
 	"github.com/shoenig/test/must"
+
+	"github.com/opennox/libs/noxnet/discover"
+	"github.com/opennox/libs/noxnet/netmsg"
 )
 
 func TestSeqBefore(t *testing.T) {
@@ -32,7 +35,7 @@ func TestSeqBefore(t *testing.T) {
 func TestStream(t *testing.T) {
 	const maxMessages = 300
 
-	newTest := func(t testing.TB, fast, debug bool, drop func(b []byte) bool) (*Conn, <-chan Message) {
+	newTest := func(t testing.TB, fast, debug bool, drop func(b []byte) bool) (*Conn, <-chan netmsg.Message) {
 		srvC, cliC := NewPipe(slog.Default(), maxAckMsgs)
 		t.Cleanup(func() {
 			_ = cliC.Close()
@@ -43,9 +46,9 @@ func TestStream(t *testing.T) {
 		srvC.Debug = debug
 		srvAddr := srvC.Addr
 
-		srvRecv := make(chan Message, maxMessages)
+		srvRecv := make(chan netmsg.Message, maxMessages)
 		srv := srvC.Port
-		srv.OnMessage(func(conn *Conn, sid StreamID, m Message, flags PacketFlags) bool {
+		srv.OnMessage(func(conn *Conn, sid StreamID, m netmsg.Message, flags PacketFlags) bool {
 			if debug {
 				t.Logf("server recv: %#v", m)
 			}
@@ -58,7 +61,7 @@ func TestStream(t *testing.T) {
 		t.Cleanup(srv.Close)
 
 		cli := cliC.Port
-		cli.OnMessage(func(conn *Conn, sid StreamID, m Message, flags PacketFlags) bool {
+		cli.OnMessage(func(conn *Conn, sid StreamID, m netmsg.Message, flags PacketFlags) bool {
 			if debug {
 				t.Logf("client recv: %#v", m)
 			}
@@ -82,7 +85,7 @@ func TestStream(t *testing.T) {
 		timer := time.NewTimer(resendTick)
 
 		for i := 0; i < maxMessages; i++ {
-			exp := &MsgDiscover{Token: uint32(i + 1)}
+			exp := &discover.MsgDiscover{Token: uint32(i + 1)}
 			err := cliConn.SendReliableMsg(ctx, 0, exp)
 			if err != nil {
 				t.Fatal(err)
@@ -90,7 +93,7 @@ func TestStream(t *testing.T) {
 			timer.Reset(resendTick)
 			select {
 			case m := <-srvRecv:
-				must.Eq[Message](t, exp, m)
+				must.Eq[netmsg.Message](t, exp, m)
 			case <-timer.C:
 				t.Fatal("expected a message")
 			}
@@ -103,10 +106,10 @@ func TestStream(t *testing.T) {
 
 		ctx := context.Background()
 
-		var expected []Message
+		var expected []netmsg.Message
 		for i := 0; i < maxMessages; i++ {
-			exp := &MsgDiscover{Token: uint32(i + 1)}
-			_, err := cliConn.QueueReliableMsg(ctx, 0, []Message{exp}, nil, nil)
+			exp := &discover.MsgDiscover{Token: uint32(i + 1)}
+			_, err := cliConn.QueueReliableMsg(ctx, 0, []netmsg.Message{exp}, nil, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -115,7 +118,7 @@ func TestStream(t *testing.T) {
 		for _, exp := range expected {
 			select {
 			case m := <-srvRecv:
-				must.Eq[Message](t, exp, m)
+				must.Eq[netmsg.Message](t, exp, m)
 			case <-ctx.Done():
 				t.Fatal("expected a message")
 			}
@@ -135,14 +138,14 @@ func TestStream(t *testing.T) {
 
 		ctx := context.Background()
 
-		exp := &MsgDiscover{Token: 0x123}
+		exp := &discover.MsgDiscover{Token: 0x123}
 		err := cliConn.SendReliableMsg(ctx, 0, exp)
 		if err != nil {
 			t.Fatal(err)
 		}
 		select {
 		case m := <-srvRecv:
-			must.Eq[Message](t, exp, m)
+			must.Eq[netmsg.Message](t, exp, m)
 		default:
 			t.Fatal("expected a message")
 		}

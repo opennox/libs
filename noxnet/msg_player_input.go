@@ -5,19 +5,22 @@ import (
 	"errors"
 	"fmt"
 	"io"
+
+	"github.com/opennox/libs/binenc"
+	"github.com/opennox/libs/noxnet/netmsg"
 )
 
 func init() {
-	RegisterMessage(&MsgPlayerInput{}, true)
-	RegisterMessage(&MsgMouse{}, false)
+	netmsg.Register(&MsgPlayerInput{}, true)
+	netmsg.Register(&MsgMouse{}, false)
 }
 
 type MsgPlayerInput struct {
 	Inputs []PlayerInput
 }
 
-func (*MsgPlayerInput) NetOp() Op {
-	return MSG_PLAYER_INPUT
+func (*MsgPlayerInput) NetOp() netmsg.Op {
+	return netmsg.MSG_PLAYER_INPUT
 }
 
 func (m *MsgPlayerInput) EncodeSize() int {
@@ -89,8 +92,8 @@ type MsgMouse struct {
 	X, Y uint16
 }
 
-func (*MsgMouse) NetOp() Op {
-	return MSG_MOUSE
+func (*MsgMouse) NetOp() netmsg.Op {
+	return netmsg.MSG_MOUSE
 }
 
 func (*MsgMouse) EncodeSize() int {
@@ -117,7 +120,7 @@ func (m *MsgMouse) Decode(data []byte) (int, error) {
 
 type PlayerInput interface {
 	CtrlCode() CtrlCode
-	Encoded
+	binenc.Encoded
 }
 
 type PlayerInput0 struct {

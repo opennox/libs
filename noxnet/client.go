@@ -9,6 +9,10 @@ import (
 	"net/netip"
 	"reflect"
 	"sync"
+
+	"github.com/opennox/libs/noxnet/discover"
+	"github.com/opennox/libs/noxnet/netmsg"
+	"github.com/opennox/libs/noxnet/udpconn"
 )
 
 var (
@@ -16,11 +20,11 @@ var (
 	ErrJoinFailed       = errors.New("join failed")
 )
 
-func NewClient(log *slog.Logger, conn PacketConn) *Client {
-	return NewClientWithPort(log, NewPort(log, conn, false))
+func NewClient(log *slog.Logger, conn udpconn.PacketConn) *Client {
+	return NewClientWithPort(log, udpconn.NewPort(log, conn, false))
 }
 
-func NewClientWithPort(log *slog.Logger, port *Port) *Client {
+func NewClientWithPort(log *slog.Logger, port *udpconn.Port) *Client {
 	c := &Client{
 		log:  log,
 		Port: port,
@@ -32,7 +36,7 @@ func NewClientWithPort(log *slog.Logger, port *Port) *Client {
 
 type Client struct {
 	log  *slog.Logger
-	Port *Port
+	Port *udpconn.Port
 
 	discover struct {
 		sync.RWMutex
@@ -41,14 +45,14 @@ type Client struct {
 
 	join struct {
 		sync.RWMutex
-		res chan<- Message
+		res chan<- netmsg.Message
 	}
 
 	smu  sync.RWMutex
-	port *Conn
-	srv  *Stream
+	port *udpconn.Conn
+	srv  *udpconn.Stream
 	pid  uint32
-	own  *Stream
+	own  *udpconn.Stream
 }
 
 func (c *Client) LocalAddr() netip.AddrPort {
@@ -82,12 +86,12 @@ func (c *Client) SetServerAddr(addr netip.AddrPort) {
 	if addr.IsValid() {
 		c.smu.Lock()
 		c.port = c.Port.Conn(addr)
-		c.srv = c.port.WithID(ServerStreamID)
+		c.srv = c.port.WithID(udpconn.ServerStreamID)
 		c.smu.Unlock()
 	}
 }
 
-func (c *Client) handleMsg(conn *Conn, sid StreamID, m Message, flags PacketFlags) bool {
+func (c *Client) handleMsg(conn *udpconn.Conn, sid udpconn.StreamID, m netmsg.Message, flags udpconn.PacketFlags) bool {
 	c.smu.RLock()
 	port := c.port
 	c.smu.RUnlock()
@@ -98,13 +102,13 @@ func (c *Client) handleMsg(conn *Conn, sid StreamID, m Message, flags PacketFlag
 		}
 		return false
 	}
-	if sid != ServerStreamID {
+	if sid != udpconn.ServerStreamID {
 		return false
 	}
 	switch m := m.(type) {
 	default:
 		return false
-	case *MsgServerInfo:
+	case *discover.MsgServerInfo:
 		c.discover.RLock()
 		ch := c.discover.byToken[m.Token]
 		c.discover.RUnlock()
@@ -124,7 +128,7 @@ func (c *Client) handleMsg(conn *Conn, sid StreamID, m Message, flags PacketFlag
 	}
 }
 
-func (c *Client) handleServerMsg(m Message) bool {
+func (c *Client) handleServerMsg(m netmsg.Message) bool {
 	switch m := m.(type) {
 	case *MsgJoinOK, ErrorMsg:
 		c.join.RLock()
@@ -146,12 +150,12 @@ func (c *Client) handleServerMsg(m Message) bool {
 
 type ServerInfoResp struct {
 	Addr netip.AddrPort
-	Info MsgServerInfo
+	Info discover.MsgServerInfo
 }
 
 func (c *Client) Discover(ctx context.Context, port int, out chan<- ServerInfoResp) error {
 	if port <= 0 {
-		port = DefaultPort
+		port = udpconn.DefaultPort
 	}
 	token := rand.Uint32()
 	c.discover.Lock()
@@ -165,7 +169,7 @@ func (c *Client) Discover(ctx context.Context, port int, out chan<- ServerInfoRe
 		delete(c.discover.byToken, token)
 		c.discover.Unlock()
 	}()
-	if err := c.Port.BroadcastMsg(port, &MsgDiscover{Token: token}); err != nil {
+	if err := c.Port.BroadcastMsg(port, &discover.MsgDiscover{Token: token}); err != nil {
 		return err
 	}
 	<-ctx.Done()
@@ -176,7 +180,7 @@ func (c *Client) Discover(ctx context.Context, port int, out chan<- ServerInfoRe
 	return err
 }
 
-func (c *Client) joinSrv(ctx context.Context, req Message, out chan<- Message, reliable bool) (func(), error) {
+func (c *Client) joinSrv(ctx context.Context, req netmsg.Message, out chan<- netmsg.Message, reliable bool) (func(), error) {
 	c.smu.RLock()
 	srv := c.srv
 	c.smu.RUnlock()
@@ -208,7 +212,7 @@ func (c *Client) joinSrv(ctx context.Context, req Message, out chan<- Message, r
 	return cancel, nil
 }
 
-func (c *Client) joinOwn(ctx context.Context, req Message, out chan<- Message, reliable bool) (func(), error) {
+func (c *Client) joinOwn(ctx context.Context, req netmsg.Message, out chan<- netmsg.Message, reliable bool) (func(), error) {
 	c.smu.RLock()
 	own := c.own
 	c.smu.RUnlock()
@@ -241,7 +245,7 @@ func (c *Client) joinOwn(ctx context.Context, req Message, out chan<- Message, r
 }
 
 func (c *Client) TryJoin(ctx context.Context, addr netip.AddrPort, req MsgServerTryJoin) error {
-	out := make(chan Message, 1)
+	out := make(chan netmsg.Message, 1)
 	c.SetServerAddr(addr)
 	cancel, err := c.joinSrv(ctx, &req, out, false)
 	if err != nil {
@@ -264,7 +268,7 @@ func (c *Client) TryJoin(ctx context.Context, addr netip.AddrPort, req MsgServer
 }
 
 func (c *Client) TryPassword(ctx context.Context, pass string) error {
-	out := make(chan Message, 1)
+	out := make(chan netmsg.Message, 1)
 	cancel, err := c.joinSrv(ctx, &MsgServerPass{Pass: pass}, out, false)
 	if err != nil {
 		return err
@@ -287,8 +291,8 @@ func (c *Client) TryPassword(ctx context.Context, pass string) error {
 
 func (c *Client) connect(ctx context.Context, addr netip.AddrPort) error {
 	c.SetServerAddr(addr)
-	out := make(chan Message, 1)
-	cancel, err := c.joinSrv(ctx, &MsgUnknown{Op: MSG_SERVER_CONNECT}, out, true)
+	out := make(chan netmsg.Message, 1)
+	cancel, err := c.joinSrv(ctx, &netmsg.Unknown{Op: netmsg.MSG_SERVER_CONNECT}, out, true)
 	if err != nil {
 		return err
 	}
@@ -308,14 +312,14 @@ func (c *Client) connect(ctx context.Context, addr netip.AddrPort) error {
 			defer c.smu.Unlock()
 			c.port.Encrypt(resp.XorKey)
 			c.pid = resp.ID
-			c.own = c.port.WithID(StreamID(resp.ID))
+			c.own = c.port.WithID(udpconn.StreamID(resp.ID))
 			return nil
 		}
 	}
 }
 
 func (c *Client) clientAccept(ctx context.Context, req *MsgClientAccept) error {
-	out := make(chan Message, 1)
+	out := make(chan netmsg.Message, 1)
 	cancel, err := c.joinOwn(ctx, req, out, true)
 	if err != nil {
 		return err

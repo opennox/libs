@@ -1,15 +1,16 @@
-package noxnet
+package discover
 
 import (
 	"encoding/binary"
 	"io"
 
 	"github.com/opennox/libs/binenc"
+	"github.com/opennox/libs/noxnet/netmsg"
 )
 
 func init() {
-	RegisterMessage(&MsgDiscover{}, false)
-	RegisterMessage(&MsgServerInfo{}, true)
+	netmsg.Register(&MsgDiscover{}, false)
+	netmsg.Register(&MsgServerInfo{}, true)
 }
 
 type MsgDiscover struct {
@@ -17,8 +18,8 @@ type MsgDiscover struct {
 	Token uint32
 }
 
-func (*MsgDiscover) NetOp() Op {
-	return MSG_SERVER_DISCOVER
+func (*MsgDiscover) NetOp() netmsg.Op {
+	return netmsg.MSG_SERVER_DISCOVER
 }
 
 func (*MsgDiscover) EncodeSize() int {
@@ -61,8 +62,8 @@ type MsgServerInfo struct {
 	ServerName string   // 69+
 }
 
-func (*MsgServerInfo) NetOp() Op {
-	return MSG_SERVER_INFO
+func (*MsgServerInfo) NetOp() netmsg.Op {
+	return netmsg.MSG_SERVER_INFO
 }
 
 func (p *MsgServerInfo) EncodeSize() int {

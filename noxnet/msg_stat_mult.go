@@ -4,10 +4,12 @@ import (
 	"encoding/binary"
 	"io"
 	"math"
+
+	"github.com/opennox/libs/noxnet/netmsg"
 )
 
 func init() {
-	RegisterMessage(&MsgStatMult{}, false)
+	netmsg.Register(&MsgStatMult{}, false)
 }
 
 type MsgStatMult struct {
@@ -17,8 +19,8 @@ type MsgStatMult struct {
 	Strength float32
 }
 
-func (*MsgStatMult) NetOp() Op {
-	return MSG_STAT_MULTIPLIERS
+func (*MsgStatMult) NetOp() netmsg.Op {
+	return netmsg.MSG_STAT_MULTIPLIERS
 }
 
 func (*MsgStatMult) EncodeSize() int {

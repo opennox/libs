@@ -5,10 +5,11 @@ import (
 	"io"
 
 	"github.com/opennox/libs/binenc"
+	"github.com/opennox/libs/noxnet/netmsg"
 )
 
 func init() {
-	RegisterMessage(&MsgNewPlayer{}, false)
+	netmsg.Register(&MsgNewPlayer{}, false)
 }
 
 type PlayerInfo struct {
@@ -103,8 +104,8 @@ type MsgNewPlayer struct {
 	Unk118     binenc.String // 118-127
 }
 
-func (*MsgNewPlayer) NetOp() Op {
-	return MSG_NEW_PLAYER
+func (*MsgNewPlayer) NetOp() netmsg.Op {
+	return netmsg.MSG_NEW_PLAYER
 }
 
 func (*MsgNewPlayer) EncodeSize() int {

@@ -1,4 +1,4 @@
-package noxnet
+package mapsend
 
 import (
 	"encoding/binary"
@@ -7,13 +7,14 @@ import (
 	"math"
 
 	"github.com/opennox/libs/binenc"
+	"github.com/opennox/libs/noxnet/netmsg"
 )
 
 func init() {
-	RegisterMessage(&MsgMapSendStart{}, false)
-	RegisterMessage(&MsgMapSendAbort{}, false)
-	RegisterMessage(&MsgMapSendPacket{}, true)
-	RegisterMessage(&MsgMapReceived{}, false)
+	netmsg.Register(&MsgMapSendStart{}, false)
+	netmsg.Register(&MsgMapSendAbort{}, false)
+	netmsg.Register(&MsgMapSendPacket{}, true)
+	netmsg.Register(&MsgMapReceived{}, false)
 }
 
 type MsgMapSendStart struct {
@@ -22,8 +23,8 @@ type MsgMapSendStart struct {
 	MapName binenc.String
 }
 
-func (*MsgMapSendStart) NetOp() Op {
-	return MSG_MAP_SEND_START
+func (*MsgMapSendStart) NetOp() netmsg.Op {
+	return netmsg.MSG_MAP_SEND_START
 }
 
 func (*MsgMapSendStart) EncodeSize() int {
@@ -54,8 +55,8 @@ type MsgMapSendAbort struct {
 	Code byte
 }
 
-func (*MsgMapSendAbort) NetOp() Op {
-	return MSG_MAP_SEND_ABORT
+func (*MsgMapSendAbort) NetOp() netmsg.Op {
+	return netmsg.MSG_MAP_SEND_ABORT
 }
 
 func (*MsgMapSendAbort) EncodeSize() int {
@@ -84,8 +85,8 @@ type MsgMapSendPacket struct {
 	Data  []byte
 }
 
-func (*MsgMapSendPacket) NetOp() Op {
-	return MSG_MAP_SEND_PACKET
+func (*MsgMapSendPacket) NetOp() netmsg.Op {
+	return netmsg.MSG_MAP_SEND_PACKET
 }
 
 func (p *MsgMapSendPacket) EncodeSize() int {
@@ -125,8 +126,8 @@ func (p *MsgMapSendPacket) Decode(data []byte) (int, error) {
 type MsgMapReceived struct {
 }
 
-func (*MsgMapReceived) NetOp() Op {
-	return MSG_RECEIVED_MAP
+func (*MsgMapReceived) NetOp() netmsg.Op {
+	return netmsg.MSG_RECEIVED_MAP
 }
 
 func (*MsgMapReceived) EncodeSize() int {

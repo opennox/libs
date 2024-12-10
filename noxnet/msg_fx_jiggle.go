@@ -2,18 +2,20 @@ package noxnet
 
 import (
 	"io"
+
+	"github.com/opennox/libs/noxnet/netmsg"
 )
 
 func init() {
-	RegisterMessage(&MsgFxJiggle{}, false)
+	netmsg.Register(&MsgFxJiggle{}, false)
 }
 
 type MsgFxJiggle struct {
 	Val byte
 }
 
-func (*MsgFxJiggle) NetOp() Op {
-	return MSG_FX_JIGGLE
+func (*MsgFxJiggle) NetOp() netmsg.Op {
+	return netmsg.MSG_FX_JIGGLE
 }
 
 func (*MsgFxJiggle) EncodeSize() int {

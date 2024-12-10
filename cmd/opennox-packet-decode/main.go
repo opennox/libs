@@ -9,7 +9,7 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/opennox/libs/noxnet"
+	"github.com/opennox/libs/noxnet/netmsg"
 )
 
 var (
@@ -64,8 +64,8 @@ type RecordIn struct {
 	Data  string `json:"data"`
 }
 
-func isUnknown(m noxnet.Message) bool {
-	_, ok := m.(*noxnet.MsgUnknown)
+func isUnknown(m netmsg.Message) bool {
+	_, ok := m.(*netmsg.Unknown)
 	return ok
 }
 
@@ -95,8 +95,8 @@ func (r RecordIn) Decode() RecordOut {
 		o.Ack = &seq
 	}
 	if len(data) == 1 {
-		op := noxnet.Op(data[0])
-		if _, _, err := noxnet.DecodeAnyPacket(data); err != nil {
+		op := netmsg.Op(data[0])
+		if _, _, err := netmsg.DecodeAny(data); err != nil {
 			s := op.String()
 			o.Op = &s
 			return o
@@ -104,7 +104,7 @@ func (r RecordIn) Decode() RecordOut {
 	}
 	allSplit := true
 	for len(data) != 0 {
-		op := noxnet.Op(data[0])
+		op := netmsg.Op(data[0])
 		sz := len(data)
 		var v any
 		lenOK := false
@@ -112,7 +112,7 @@ func (r RecordIn) Decode() RecordOut {
 			sz = n + 1
 			lenOK = true
 		}
-		if m, n, err := noxnet.DecodeAnyPacket(data); err == nil && n > 0 && !isUnknown(m) {
+		if m, n, err := netmsg.DecodeAny(data); err == nil && n > 0 && !isUnknown(m) {
 			sz = n
 			v = m
 			lenOK = true

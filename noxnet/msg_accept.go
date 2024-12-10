@@ -6,20 +6,21 @@ import (
 	"io"
 
 	"github.com/opennox/libs/binenc"
+	"github.com/opennox/libs/noxnet/netmsg"
 )
 
 func init() {
-	RegisterMessage(&MsgAccept{}, false)
-	RegisterMessage(&MsgServerAccept{}, false)
-	RegisterMessage(&MsgClientAccept{}, false)
+	netmsg.Register(&MsgAccept{}, false)
+	netmsg.Register(&MsgServerAccept{}, false)
+	netmsg.Register(&MsgClientAccept{}, false)
 }
 
 type MsgAccept struct {
 	ID byte
 }
 
-func (*MsgAccept) NetOp() Op {
-	return MSG_ACCEPTED
+func (*MsgAccept) NetOp() netmsg.Op {
+	return netmsg.MSG_ACCEPTED
 }
 
 func (*MsgAccept) EncodeSize() int {
@@ -47,8 +48,8 @@ type MsgServerAccept struct {
 	XorKey byte
 }
 
-func (*MsgServerAccept) NetOp() Op {
-	return MSG_SERVER_ACCEPT
+func (*MsgServerAccept) NetOp() netmsg.Op {
+	return netmsg.MSG_SERVER_ACCEPT
 }
 
 func (*MsgServerAccept) EncodeSize() int {
@@ -80,8 +81,8 @@ type MsgClientAccept struct {
 	Unk129 [26]byte
 }
 
-func (*MsgClientAccept) NetOp() Op {
-	return MSG_CLIENT_ACCEPT
+func (*MsgClientAccept) NetOp() netmsg.Op {
+	return netmsg.MSG_CLIENT_ACCEPT
 }
 
 func (*MsgClientAccept) EncodeSize() int {

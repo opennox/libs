@@ -4,16 +4,18 @@ import (
 	"errors"
 	"fmt"
 	"io"
+
+	"github.com/opennox/libs/noxnet/netmsg"
 )
 
 func init() {
-	RegisterMessage(&MsgServerError{}, false)
-	RegisterMessage(&MsgPasswordRequired{}, false)
-	RegisterMessage(&MsgJoinFailed{}, false)
+	netmsg.Register(&MsgServerError{}, false)
+	netmsg.Register(&MsgPasswordRequired{}, false)
+	netmsg.Register(&MsgJoinFailed{}, false)
 }
 
 type ErrorMsg interface {
-	Message
+	netmsg.Message
 	Error() error
 }
 
@@ -128,8 +130,8 @@ func (p *MsgServerError) Error() error {
 	return p.Err
 }
 
-func (*MsgServerError) NetOp() Op {
-	return MSG_SERVER_ERROR
+func (*MsgServerError) NetOp() netmsg.Op {
+	return netmsg.MSG_SERVER_ERROR
 }
 
 func (*MsgServerError) EncodeSize() int {
@@ -161,8 +163,8 @@ func (*MsgPasswordRequired) Error() error {
 	return ErrPasswordRequired
 }
 
-func (*MsgPasswordRequired) NetOp() Op {
-	return MSG_PASSWORD_REQUIRED
+func (*MsgPasswordRequired) NetOp() netmsg.Op {
+	return netmsg.MSG_PASSWORD_REQUIRED
 }
 
 func (*MsgPasswordRequired) EncodeSize() int {
@@ -186,8 +188,8 @@ func (*MsgJoinFailed) Error() error {
 	return ErrJoinFailed
 }
 
-func (*MsgJoinFailed) NetOp() Op {
-	return MSG_SERVER_JOIN_FAIL
+func (*MsgJoinFailed) NetOp() netmsg.Op {
+	return netmsg.MSG_SERVER_JOIN_FAIL
 }
 
 func (*MsgJoinFailed) EncodeSize() int {

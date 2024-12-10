@@ -75,10 +75,10 @@ func (p *sendStream[C]) Cancel(reason Error) {
 	if p.state != sendAccepted {
 		return
 	}
-	_ = p.conn.SendReliableMsg(&MsgCancel{
+	_ = p.conn.SendReliableMsg(&MsgXfer{&MsgCancel{
 		RecvID: p.recvID,
 		Reason: reason,
-	})
+	}})
 	p.callAborted(reason)
 	p.Close()
 }
@@ -141,12 +141,12 @@ func (p *sendStream[C]) Start(d Data) {
 		}
 		p.last = b
 	}
-	_ = p.conn.SendReliableMsg(&MsgStart{
+	_ = p.conn.SendReliableMsg(&MsgXfer{&MsgStart{
 		Act:    d.Action,
 		Size:   uint32(len(d.Data)),
 		Type:   binenc.String{Value: d.Type},
 		SendID: p.id,
-	})
+	}})
 }
 
 func (p *sendStream[C]) Update(ts time.Duration) {
@@ -158,12 +158,12 @@ func (p *sendStream[C]) Update(ts time.Duration) {
 	}
 	for j, b := 0, p.first; j < 2 && b != nil; j, b = j+1, b.next {
 		if t := b.lastSent; t == 0 {
-			_ = p.conn.SendUnreliableMsg(&MsgData{
+			_ = p.conn.SendUnreliableMsg(&MsgXfer{&MsgData{
 				RecvID: p.recvID,
 				Token:  0,
 				Chunk:  b.ind,
 				Data:   b.data,
-			})
+			}})
 			p.nextChunk++
 			b.lastSent = ts
 		} else if ts > t+retryInterval {
@@ -171,12 +171,12 @@ func (p *sendStream[C]) Update(ts time.Duration) {
 				p.Cancel(ErrSendTimeout)
 				return
 			}
-			_ = p.conn.SendUnreliableMsg(&MsgData{
+			_ = p.conn.SendUnreliableMsg(&MsgXfer{&MsgData{
 				RecvID: p.recvID,
 				Token:  0,
 				Chunk:  b.ind,
 				Data:   b.data,
-			})
+			}})
 			b.lastSent = ts
 			b.retries++
 		}

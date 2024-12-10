@@ -4,15 +4,17 @@ import (
 	"encoding/binary"
 	"io"
 	"time"
+
+	"github.com/opennox/libs/noxnet/netmsg"
 )
 
 func init() {
-	RegisterMessage(&MsgClientPing{}, false)
-	RegisterMessage(&MsgClientPong{}, false)
-	RegisterMessage(&MsgServerPing{}, false)
-	RegisterMessage(&MsgServerPong{}, false)
-	RegisterMessage(&MsgSpeed{}, false)
-	RegisterMessage(&MsgKeepAlive{}, false)
+	netmsg.Register(&MsgClientPing{}, false)
+	netmsg.Register(&MsgClientPong{}, false)
+	netmsg.Register(&MsgServerPing{}, false)
+	netmsg.Register(&MsgServerPong{}, false)
+	netmsg.Register(&MsgSpeed{}, false)
+	netmsg.Register(&MsgKeepAlive{}, false)
 }
 
 type MsgClientPing struct {
@@ -25,8 +27,8 @@ func (m *MsgClientPing) Pong() *MsgClientPong {
 	}
 }
 
-func (*MsgClientPing) NetOp() Op {
-	return MSG_CLIENT_PING
+func (*MsgClientPing) NetOp() netmsg.Op {
+	return netmsg.MSG_CLIENT_PING
 }
 
 func (*MsgClientPing) EncodeSize() int {
@@ -53,8 +55,8 @@ type MsgClientPong struct {
 	T time.Duration // in ms
 }
 
-func (*MsgClientPong) NetOp() Op {
-	return MSG_CLIENT_PONG
+func (*MsgClientPong) NetOp() netmsg.Op {
+	return netmsg.MSG_CLIENT_PONG
 }
 
 func (*MsgClientPong) EncodeSize() int {
@@ -89,8 +91,8 @@ func (m *MsgServerPing) Pong() *MsgServerPong {
 	}
 }
 
-func (*MsgServerPing) NetOp() Op {
-	return MSG_SERVER_PING
+func (*MsgServerPing) NetOp() netmsg.Op {
+	return netmsg.MSG_SERVER_PING
 }
 
 func (*MsgServerPing) EncodeSize() int {
@@ -120,8 +122,8 @@ type MsgServerPong struct {
 	T   time.Duration // in ms
 }
 
-func (*MsgServerPong) NetOp() Op {
-	return MSG_SERVER_PONG
+func (*MsgServerPong) NetOp() netmsg.Op {
+	return netmsg.MSG_SERVER_PONG
 }
 
 func (*MsgServerPong) EncodeSize() int {
@@ -150,8 +152,8 @@ type MsgSpeed struct {
 	Speed int32 // 256 KB / T ms (or -1)
 }
 
-func (*MsgSpeed) NetOp() Op {
-	return MSG_SPEED
+func (*MsgSpeed) NetOp() netmsg.Op {
+	return netmsg.MSG_SPEED
 }
 
 func (*MsgSpeed) EncodeSize() int {
@@ -177,8 +179,8 @@ func (m *MsgSpeed) Decode(data []byte) (int, error) {
 type MsgKeepAlive struct {
 }
 
-func (*MsgKeepAlive) NetOp() Op {
-	return MSG_KEEP_ALIVE
+func (*MsgKeepAlive) NetOp() netmsg.Op {
+	return netmsg.MSG_KEEP_ALIVE
 }
 
 func (*MsgKeepAlive) EncodeSize() int {

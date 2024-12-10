@@ -4,10 +4,11 @@ import (
 	"io"
 
 	"github.com/opennox/libs/binenc"
+	"github.com/opennox/libs/noxnet/netmsg"
 )
 
 func init() {
-	RegisterMessage(&MsgServerPass{}, false)
+	netmsg.Register(&MsgServerPass{}, false)
 }
 
 type MsgServerPass struct {
@@ -15,8 +16,8 @@ type MsgServerPass struct {
 	Pass string // 1-19
 }
 
-func (*MsgServerPass) NetOp() Op {
-	return MSG_SERVER_PASSWORD
+func (*MsgServerPass) NetOp() netmsg.Op {
+	return netmsg.MSG_SERVER_PASSWORD
 }
 
 func (*MsgServerPass) EncodeSize() int {

@@ -4,12 +4,14 @@ import (
 	"encoding/binary"
 	"io"
 	"time"
+
+	"github.com/opennox/libs/noxnet/netmsg"
 )
 
 func init() {
-	RegisterMessage(&MsgTimestamp{}, false)
-	RegisterMessage(&MsgFullTimestamp{}, false)
-	RegisterMessage(&MsgRateChange{}, false)
+	netmsg.Register(&MsgTimestamp{}, false)
+	netmsg.Register(&MsgFullTimestamp{}, false)
+	netmsg.Register(&MsgRateChange{}, false)
 }
 
 type Timestamp uint32
@@ -42,8 +44,8 @@ type MsgTimestamp struct {
 	T uint16
 }
 
-func (*MsgTimestamp) NetOp() Op {
-	return MSG_TIMESTAMP
+func (*MsgTimestamp) NetOp() netmsg.Op {
+	return netmsg.MSG_TIMESTAMP
 }
 
 func (*MsgTimestamp) EncodeSize() int {
@@ -70,8 +72,8 @@ type MsgFullTimestamp struct {
 	T Timestamp
 }
 
-func (*MsgFullTimestamp) NetOp() Op {
-	return MSG_FULL_TIMESTAMP
+func (*MsgFullTimestamp) NetOp() netmsg.Op {
+	return netmsg.MSG_FULL_TIMESTAMP
 }
 
 func (*MsgFullTimestamp) EncodeSize() int {
@@ -98,8 +100,8 @@ type MsgRateChange struct {
 	Rate byte
 }
 
-func (*MsgRateChange) NetOp() Op {
-	return MSG_RATE_CHANGE
+func (*MsgRateChange) NetOp() netmsg.Op {
+	return netmsg.MSG_RATE_CHANGE
 }
 
 func (*MsgRateChange) EncodeSize() int {

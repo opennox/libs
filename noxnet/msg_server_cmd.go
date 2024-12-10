@@ -6,10 +6,11 @@ import (
 	"io"
 
 	"github.com/opennox/libs/binenc"
+	"github.com/opennox/libs/noxnet/netmsg"
 )
 
 func init() {
-	RegisterMessage(&MsgServerCmd{}, true)
+	netmsg.Register(&MsgServerCmd{}, true)
 }
 
 type MsgServerCmd struct {
@@ -18,8 +19,8 @@ type MsgServerCmd struct {
 	Cmd     string
 }
 
-func (*MsgServerCmd) NetOp() Op {
-	return MSG_SERVER_CMD
+func (*MsgServerCmd) NetOp() netmsg.Op {
+	return netmsg.MSG_SERVER_CMD
 }
 
 func (p *MsgServerCmd) EncodeSize() int {

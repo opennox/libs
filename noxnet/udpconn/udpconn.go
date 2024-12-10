@@ -1,4 +1,4 @@
-package noxnet
+package udpconn
 
 import (
 	"context"
@@ -11,12 +11,12 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/opennox/libs/noxnet/netmsg"
 )
 
 const (
-	DefaultPort    = 18590
-	ProtoVersion   = 0x1039a // 0.1.922
-	ProtoVersionHD = 0xf039a // 0.15.922
+	DefaultPort = 18590
 )
 
 const (
@@ -61,7 +61,7 @@ func (f *onMessageFuncs) Add(fnc OnMessageFunc) {
 	f.funcs = append(f.funcs, fnc)
 }
 
-func (f *onMessageFuncs) Call(conn *Conn, sid StreamID, m Message, flags PacketFlags) bool {
+func (f *onMessageFuncs) Call(conn *Conn, sid StreamID, m netmsg.Message, flags PacketFlags) bool {
 	if f == nil {
 		return false
 	}
@@ -87,7 +87,7 @@ const (
 	PacketReliable = PacketFlags(1 << iota)
 )
 
-type OnMessageFunc func(conn *Conn, sid StreamID, m Message, flags PacketFlags) bool
+type OnMessageFunc func(conn *Conn, sid StreamID, m netmsg.Message, flags PacketFlags) bool
 
 func NewPort(log *slog.Logger, conn PacketConn, isServer bool) *Port {
 	if log == nil {
@@ -193,13 +193,13 @@ func (p *Port) writeRaw(addr netip.AddrPort, b1, b2 byte, data []byte, xor byte)
 	return err
 }
 
-func (p *Port) WriteMsg(addr netip.AddrPort, b1, b2 byte, m Message, xor byte) error {
+func (p *Port) WriteMsg(addr netip.AddrPort, b1, b2 byte, m netmsg.Message, xor byte) error {
 	p.wmu.Lock()
 	defer p.wmu.Unlock()
 	var err error
 	p.wbuf = p.wbuf[:0]
 	p.wbuf = append(p.wbuf, b1, b2)
-	p.wbuf, err = AppendPacket(p.wbuf, m)
+	p.wbuf, err = netmsg.Append(p.wbuf, m)
 	if err != nil {
 		return err
 	}
@@ -210,7 +210,7 @@ func (p *Port) WriteMsg(addr netip.AddrPort, b1, b2 byte, m Message, xor byte) e
 	return err
 }
 
-func (p *Port) BroadcastMsg(port int, m Message) error {
+func (p *Port) BroadcastMsg(port int, m netmsg.Message) error {
 	if port <= 0 {
 		port = DefaultPort
 	}
@@ -398,7 +398,7 @@ func (p *Conn) handlePacket(data []byte) {
 		flags |= PacketReliable
 	}
 	for len(data) > 0 {
-		m, n, err := DecodeAnyPacket(data)
+		m, n, err := netmsg.DecodeAny(data)
 		if err != nil {
 			op := data[0]
 			p.log.Error("Failed to decode packet", "op", op, "err", err)
@@ -479,7 +479,7 @@ func (p *Conn) SendUnreliable(sid StreamID, data []byte) error {
 	return p.sendUnreliable(sid, data)
 }
 
-func (p *Conn) SendUnreliableMsg(sid StreamID, m Message) error {
+func (p *Conn) SendUnreliableMsg(sid StreamID, m netmsg.Message) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	seq := p.ack
@@ -522,13 +522,13 @@ func (p *Conn) CancelReliable(pid PacketID) {
 	})
 }
 
-func (p *Conn) QueueReliableMsg(ctx context.Context, sid StreamID, arr []Message, done, timeout func()) (PacketID, error) {
+func (p *Conn) QueueReliableMsg(ctx context.Context, sid StreamID, arr []netmsg.Message, done, timeout func()) (PacketID, error) {
 	var (
 		data []byte
 		err  error
 	)
 	for _, m := range arr {
-		data, err = AppendPacket(data, m)
+		data, err = netmsg.Append(data, m)
 		if err != nil {
 			return 0, err
 		}
@@ -562,8 +562,8 @@ func (p *Conn) SendReliable(ctx context.Context, sid StreamID, data []byte) erro
 	}
 }
 
-func (p *Conn) SendReliableMsg(ctx context.Context, sid StreamID, m Message) error {
-	data, err := AppendPacket(nil, m)
+func (p *Conn) SendReliableMsg(ctx context.Context, sid StreamID, m netmsg.Message) error {
+	data, err := netmsg.Append(nil, m)
 	if err != nil {
 		return err
 	}
@@ -679,7 +679,7 @@ func (p *Stream) SendUnreliable(data []byte) error {
 	return p.p.SendUnreliable(p.sid, data)
 }
 
-func (p *Stream) SendUnreliableMsg(m Message) error {
+func (p *Stream) SendUnreliableMsg(m netmsg.Message) error {
 	return p.p.SendUnreliableMsg(p.sid, m)
 }
 
@@ -691,7 +691,7 @@ func (p *Stream) CancelReliable(id PacketID) {
 	p.p.CancelReliable(id)
 }
 
-func (p *Stream) QueueReliableMsg(ctx context.Context, arr []Message, done, timeout func()) (PacketID, error) {
+func (p *Stream) QueueReliableMsg(ctx context.Context, arr []netmsg.Message, done, timeout func()) (PacketID, error) {
 	return p.p.QueueReliableMsg(ctx, p.sid, arr, done, timeout)
 }
 
@@ -699,6 +699,6 @@ func (p *Stream) SendReliable(ctx context.Context, data []byte) error {
 	return p.p.SendReliable(ctx, p.sid, data)
 }
 
-func (p *Stream) SendReliableMsg(ctx context.Context, m Message) error {
+func (p *Stream) SendReliableMsg(ctx context.Context, m netmsg.Message) error {
 	return p.p.SendReliableMsg(ctx, p.sid, m)
 }

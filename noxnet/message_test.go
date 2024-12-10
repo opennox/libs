@@ -12,6 +12,9 @@ import (
 	"github.com/shoenig/test/must"
 
 	"github.com/opennox/libs/binenc"
+	"github.com/opennox/libs/noxnet/discover"
+	"github.com/opennox/libs/noxnet/mapsend"
+	"github.com/opennox/libs/noxnet/netmsg"
 	"github.com/opennox/libs/noxnet/netxfer"
 )
 
@@ -19,12 +22,12 @@ func TestDecodePacket(t *testing.T) {
 	var cases = []struct {
 		name    string
 		skip    bool
-		packet  Message
-		packets []Message
+		packet  netmsg.Message
+		packets []netmsg.Message
 	}{
 		{
 			name: "server info",
-			packet: &MsgServerInfo{
+			packet: &discover.MsgServerInfo{
 				PlayersCur: 1,
 				PlayersMax: 32,
 				Unk2:       [5]byte{0x0f, 0x0f, 0xff, 0xff, 0xff},
@@ -52,7 +55,7 @@ func TestDecodePacket(t *testing.T) {
 		},
 		{
 			name: "server accept",
-			packets: []Message{
+			packets: []netmsg.Message{
 				&MsgAccept{
 					ID: 0,
 				},
@@ -64,7 +67,7 @@ func TestDecodePacket(t *testing.T) {
 		},
 		{
 			name: "client accept",
-			packets: []Message{
+			packets: []netmsg.Message{
 				&MsgAccept{
 					ID: 1,
 				},
@@ -213,7 +216,7 @@ func TestDecodePacket(t *testing.T) {
 		},
 		{
 			name: "map send start",
-			packet: &MsgMapSendStart{
+			packet: &mapsend.MsgMapSendStart{
 				Unk1:    [3]byte{0, 0, 0},
 				MapSize: 208134,
 				MapName: binenc.String{Value: "_noxtest.map"},
@@ -221,7 +224,7 @@ func TestDecodePacket(t *testing.T) {
 		},
 		{
 			name: "map send packet",
-			packet: &MsgMapSendPacket{
+			packet: &mapsend.MsgMapSendPacket{
 				Unk:   0,
 				Block: 12,
 				Data:  []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10},
@@ -238,7 +241,7 @@ func TestDecodePacket(t *testing.T) {
 		},
 		{
 			name: "xfer start motd",
-			packet: &MsgXfer{&netxfer.MsgStart{
+			packet: &netxfer.MsgXfer{&netxfer.MsgStart{
 				Act:    1,
 				Unk1:   0,
 				Size:   376,
@@ -249,14 +252,14 @@ func TestDecodePacket(t *testing.T) {
 		},
 		{
 			name: "xfer accept",
-			packet: &MsgXfer{&netxfer.MsgAccept{
+			packet: &netxfer.MsgXfer{&netxfer.MsgAccept{
 				RecvID: 0,
 				SendID: 0,
 			}},
 		},
 		{
 			name: "xfer data motd",
-			packet: &MsgXfer{&netxfer.MsgData{
+			packet: &netxfer.MsgXfer{&netxfer.MsgData{
 				Token:  0,
 				RecvID: 0,
 				Chunk:  1,
@@ -265,7 +268,7 @@ func TestDecodePacket(t *testing.T) {
 		},
 		{
 			name: "xfer ack",
-			packet: &MsgXfer{&netxfer.MsgAck{
+			packet: &netxfer.MsgXfer{&netxfer.MsgAck{
 				Token:  0,
 				RecvID: 0,
 				Chunk:  1,
@@ -273,7 +276,7 @@ func TestDecodePacket(t *testing.T) {
 		},
 		{
 			name: "xfer close",
-			packet: &MsgXfer{&netxfer.MsgDone{
+			packet: &netxfer.MsgXfer{&netxfer.MsgDone{
 				RecvID: 0,
 			}},
 		},
@@ -309,28 +312,28 @@ func TestDecodePacket(t *testing.T) {
 			fname := filepath.Join("testdata", strings.ReplaceAll(c.name, " ", "_")+".dat")
 			data, err := os.ReadFile(fname)
 			if errors.Is(err, fs.ErrNotExist) {
-				data, err = AppendPacket(nil, c.packet)
+				data, err = netmsg.Append(nil, c.packet)
 				must.NoError(t, err)
 				err = os.WriteFile(fname, data, 0644)
 				must.NoError(t, err)
 			}
 			must.NoError(t, err)
 			if c.packet != nil {
-				p, n, err := DecodeAnyPacket(data)
+				p, n, err := netmsg.DecodeAny(data)
 				must.NoError(t, err)
 				must.Eq(t, c.packet, p)
 				must.EqOp(t, len(data), n)
-				buf, err := AppendPacket(nil, p)
+				buf, err := netmsg.Append(nil, p)
 				must.NoError(t, err)
 				must.Eq(t, data, buf)
-				n, err = DecodePacket(data, p)
+				n, err = netmsg.Decode(data, p)
 				must.NoError(t, err)
 				must.EqOp(t, len(data), n)
 			} else if len(c.packets) != 0 {
 				left := data
-				var got []Message
+				var got []netmsg.Message
 				for len(left) > 0 {
-					p, n, err := DecodeAnyPacket(left)
+					p, n, err := netmsg.DecodeAny(left)
 					must.NoError(t, err)
 					left = left[n:]
 					got = append(got, p)
@@ -339,7 +342,7 @@ func TestDecodePacket(t *testing.T) {
 				must.EqOp(t, 0, len(left))
 				var buf []byte
 				for _, p := range got {
-					buf, err = AppendPacket(buf, p)
+					buf, err = netmsg.Append(buf, p)
 					must.NoError(t, err)
 				}
 				must.Eq(t, data, buf)

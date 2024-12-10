@@ -1,4 +1,4 @@
-package noxnet
+package netmsg
 
 //go:generate stringer -type=Op
 

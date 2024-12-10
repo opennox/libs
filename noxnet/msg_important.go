@@ -3,19 +3,21 @@ package noxnet
 import (
 	"encoding/binary"
 	"io"
+
+	"github.com/opennox/libs/noxnet/netmsg"
 )
 
 func init() {
-	RegisterMessage(&MsgImportant{}, false)
-	RegisterMessage(&MsgImportantAck{}, false)
+	netmsg.Register(&MsgImportant{}, false)
+	netmsg.Register(&MsgImportantAck{}, false)
 }
 
 type MsgImportant struct {
 	ID uint32
 }
 
-func (*MsgImportant) NetOp() Op {
-	return MSG_IMPORTANT
+func (*MsgImportant) NetOp() netmsg.Op {
+	return netmsg.MSG_IMPORTANT
 }
 
 func (*MsgImportant) EncodeSize() int {
@@ -42,8 +44,8 @@ type MsgImportantAck struct {
 	ID uint32
 }
 
-func (*MsgImportantAck) NetOp() Op {
-	return MSG_IMPORTANT_ACK
+func (*MsgImportantAck) NetOp() netmsg.Op {
+	return netmsg.MSG_IMPORTANT_ACK
 }
 
 func (*MsgImportantAck) EncodeSize() int {

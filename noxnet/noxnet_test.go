@@ -6,14 +6,22 @@ import (
 	"net/netip"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/shoenig/test/must"
+
+	"github.com/opennox/libs/noxnet/discover"
+	"github.com/opennox/libs/noxnet/udpconn"
+)
+
+const (
+	resendTick = 20 * time.Millisecond
 )
 
 func newServerAndClient(t testing.TB, e Engine) (*Server, *Client) {
 	log := slog.Default()
-	srvC, cliC := NewPipe(log, 10)
-	srvC.Addr = netip.AddrPortFrom(srvC.Addr.Addr(), DefaultPort)
+	srvC, cliC := udpconn.NewPipe(log, 10)
+	srvC.Addr = netip.AddrPortFrom(srvC.Addr.Addr(), udpconn.DefaultPort)
 	srvC.Debug = true
 	cliC.Debug = true
 	t.Cleanup(func() {
@@ -30,12 +38,12 @@ func newServerAndClient(t testing.TB, e Engine) (*Server, *Client) {
 type testEngine struct {
 	t testing.TB
 
-	Info  MsgServerInfo
+	Info  discover.MsgServerInfo
 	OnTry func(req *MsgServerTryJoin) error
 	Pass  string
 }
 
-func (e *testEngine) ServerInfo(addr netip.AddrPort) *MsgServerInfo {
+func (e *testEngine) ServerInfo(addr netip.AddrPort) *discover.MsgServerInfo {
 	v := e.Info
 	return &v
 }
@@ -63,7 +71,7 @@ func (e *testEngine) Connect(addr netip.AddrPort) (Player, error) {
 }
 
 func TestDiscover(t *testing.T) {
-	e := &testEngine{t: t, Info: MsgServerInfo{
+	e := &testEngine{t: t, Info: discover.MsgServerInfo{
 		PlayersCur: 3,
 		PlayersMax: 250,
 		MapName:    "testmap",

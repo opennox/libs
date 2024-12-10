@@ -1,4 +1,4 @@
-package noxnet
+package udpconn
 
 import (
 	"encoding/hex"

@@ -5,10 +5,11 @@ import (
 	"io"
 
 	"github.com/opennox/libs/binenc"
+	"github.com/opennox/libs/noxnet/netmsg"
 )
 
 func init() {
-	RegisterMessage(&MsgUseMap{}, false)
+	netmsg.Register(&MsgUseMap{}, false)
 }
 
 type MsgUseMap struct {
@@ -17,8 +18,8 @@ type MsgUseMap struct {
 	T       Timestamp
 }
 
-func (*MsgUseMap) NetOp() Op {
-	return MSG_USE_MAP
+func (*MsgUseMap) NetOp() netmsg.Op {
+	return netmsg.MSG_USE_MAP
 }
 
 func (*MsgUseMap) EncodeSize() int {

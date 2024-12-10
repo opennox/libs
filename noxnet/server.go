@@ -7,6 +7,10 @@ import (
 	"net/netip"
 	"reflect"
 	"sync"
+
+	"github.com/opennox/libs/noxnet/discover"
+	"github.com/opennox/libs/noxnet/netmsg"
+	"github.com/opennox/libs/noxnet/udpconn"
 )
 
 type PlayerID uint32
@@ -18,10 +22,10 @@ type Player interface {
 }
 
 type Mapper interface {
-	NewPlayer(addr netip.AddrPort, cli Player, p Player) (StreamID, error)
-	GetPlayer(addr netip.AddrPort, sid StreamID) Player
-	GetPlayerPeer(addr netip.AddrPort, cli Player, sid StreamID) Player
-	DelPlayer(addr netip.AddrPort, cli Player, sid StreamID) bool
+	NewPlayer(addr netip.AddrPort, cli Player, p Player) (udpconn.StreamID, error)
+	GetPlayer(addr netip.AddrPort, sid udpconn.StreamID) Player
+	GetPlayerPeer(addr netip.AddrPort, cli Player, sid udpconn.StreamID) Player
+	DelPlayer(addr netip.AddrPort, cli Player, sid udpconn.StreamID) bool
 }
 
 func NewMapper() Mapper {
@@ -30,23 +34,23 @@ func NewMapper() Mapper {
 
 type defaultMapper struct {
 	mu    sync.RWMutex
-	bySID [MaxStreams - 2]Player
+	bySID [udpconn.MaxStreams - 2]Player
 }
 
-func (m *defaultMapper) NewPlayer(_ netip.AddrPort, _ Player, p Player) (StreamID, error) {
+func (m *defaultMapper) NewPlayer(_ netip.AddrPort, _ Player, p Player) (udpconn.StreamID, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	for i, p2 := range m.bySID {
 		if p2 == nil {
 			m.bySID[i] = p
-			return StreamID(i + 1), nil
+			return udpconn.StreamID(i + 1), nil
 		}
 	}
 	return 0, ErrFull
 }
 
-func (m *defaultMapper) GetPlayer(_ netip.AddrPort, sid StreamID) Player {
-	if sid == ServerStreamID || sid == MaxStreamID {
+func (m *defaultMapper) GetPlayer(_ netip.AddrPort, sid udpconn.StreamID) Player {
+	if sid == udpconn.ServerStreamID || sid == udpconn.MaxStreamID {
 		return nil
 	}
 	ind := int(sid) - 1
@@ -56,12 +60,12 @@ func (m *defaultMapper) GetPlayer(_ netip.AddrPort, sid StreamID) Player {
 	return p
 }
 
-func (m *defaultMapper) GetPlayerPeer(addr netip.AddrPort, _ Player, sid StreamID) Player {
+func (m *defaultMapper) GetPlayerPeer(addr netip.AddrPort, _ Player, sid udpconn.StreamID) Player {
 	return m.GetPlayer(addr, sid)
 }
 
-func (m *defaultMapper) DelPlayer(_ netip.AddrPort, _ Player, sid StreamID) bool {
-	if sid == ServerStreamID || sid == MaxStreamID {
+func (m *defaultMapper) DelPlayer(_ netip.AddrPort, _ Player, sid udpconn.StreamID) bool {
+	if sid == udpconn.ServerStreamID || sid == udpconn.MaxStreamID {
 		return false
 	}
 	ind := int(sid) - 1
@@ -73,14 +77,14 @@ func (m *defaultMapper) DelPlayer(_ netip.AddrPort, _ Player, sid StreamID) bool
 }
 
 type Engine interface {
-	ServerInfo(addr netip.AddrPort) *MsgServerInfo
+	ServerInfo(addr netip.AddrPort) *discover.MsgServerInfo
 	PreJoin(addr netip.AddrPort, req *MsgServerTryJoin) error
 	CheckPass(addr netip.AddrPort, pass string) error
 	Connect(addr netip.AddrPort) (Player, error)
 }
 
-func NewServer(log *slog.Logger, conn PacketConn, e Engine, opts *ServerOptions) *Server {
-	return NewServerWithPort(log, NewPort(log, conn, true), e, opts)
+func NewServer(log *slog.Logger, conn udpconn.PacketConn, e Engine, opts *ServerOptions) *Server {
+	return NewServerWithPort(log, udpconn.NewPort(log, conn, true), e, opts)
 }
 
 type ServerOptions struct {
@@ -88,7 +92,7 @@ type ServerOptions struct {
 	NoXor     bool
 }
 
-func NewServerWithPort(log *slog.Logger, port *Port, e Engine, opts *ServerOptions) *Server {
+func NewServerWithPort(log *slog.Logger, port *udpconn.Port, e Engine, opts *ServerOptions) *Server {
 	if opts == nil {
 		opts = &ServerOptions{}
 	}
@@ -109,7 +113,7 @@ func NewServerWithPort(log *slog.Logger, port *Port, e Engine, opts *ServerOptio
 
 type Server struct {
 	log  *slog.Logger
-	Port *Port
+	Port *udpconn.Port
 	e    Engine
 
 	players struct {
@@ -132,8 +136,8 @@ func (s *Server) Reset() {
 	s.Port.Reset()
 }
 
-func (s *Server) handleMsg(conn *Conn, sid StreamID, m Message, flags PacketFlags) bool {
-	srv := conn.WithID(ServerStreamID)
+func (s *Server) handleMsg(conn *udpconn.Conn, sid udpconn.StreamID, m netmsg.Message, flags udpconn.PacketFlags) bool {
+	srv := conn.WithID(udpconn.ServerStreamID)
 	switch sid {
 	default:
 		p := s.players.mapper.GetPlayer(conn.RemoteAddr(), sid)
@@ -142,19 +146,19 @@ func (s *Server) handleMsg(conn *Conn, sid StreamID, m Message, flags PacketFlag
 			return false
 		}
 		return s.handlePlayerMsg(srv, p, m)
-	case ServerStreamID:
+	case udpconn.ServerStreamID:
 		return s.handleGlobalMsg(srv, m)
-	case MaxStreamID:
+	case udpconn.MaxStreamID:
 		return s.handleConnectMsg(srv, m)
 	}
 }
 
-func (s *Server) handleGlobalMsg(conn *Stream, m Message) bool {
+func (s *Server) handleGlobalMsg(conn *udpconn.Stream, m netmsg.Message) bool {
 	switch m := m.(type) {
 	default:
 		s.log.Warn("unhandled global message", "type", reflect.TypeOf(m).String(), "msg", m)
 		return false
-	case *MsgDiscover:
+	case *discover.MsgDiscover:
 		info := s.e.ServerInfo(conn.Addr())
 		if info == nil {
 			return true // ignore
@@ -189,7 +193,7 @@ func (s *Server) handleGlobalMsg(conn *Stream, m Message) bool {
 	}
 }
 
-func (s *Server) handleConnectMsg(conn *Stream, m Message) bool {
+func (s *Server) handleConnectMsg(conn *udpconn.Stream, m netmsg.Message) bool {
 	ctx := context.Background()
 	switch m := m.(type) {
 	case *MsgConnect:
@@ -210,7 +214,7 @@ func (s *Server) handleConnectMsg(conn *Stream, m Message) bool {
 		if !s.players.noXor {
 			xor = byte(rand.UintN(0xff))
 		}
-		_, err = conn.QueueReliableMsg(ctx, []Message{&MsgAccept{
+		_, err = conn.QueueReliableMsg(ctx, []netmsg.Message{&MsgAccept{
 			ID: 0, // TODO
 		}, &MsgServerAccept{
 			ID: uint32(sid), XorKey: xor,
@@ -229,7 +233,7 @@ func (s *Server) handleConnectMsg(conn *Stream, m Message) bool {
 	}
 }
 
-func (s *Server) handlePlayerMsg(conn *Stream, p Player, m Message) bool {
+func (s *Server) handlePlayerMsg(conn *udpconn.Stream, p Player, m netmsg.Message) bool {
 	switch m := m.(type) {
 	default:
 		s.log.Warn("unhandled player message", "player", p.PlayerID(), "type", reflect.TypeOf(m).String(), "msg", m)

@@ -3,6 +3,8 @@ package netxfer
 import (
 	"math"
 	"time"
+
+	"github.com/opennox/libs/noxnet/netmsg"
 )
 
 const (
@@ -24,8 +26,8 @@ type Data struct {
 
 type Conn interface {
 	comparable
-	SendReliableMsg(m Msg) error
-	SendUnreliableMsg(m Msg) error
+	SendReliableMsg(m netmsg.Message) error
+	SendUnreliableMsg(m netmsg.Message) error
 }
 
 type State[C Conn] struct {
