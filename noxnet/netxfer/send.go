@@ -1,6 +1,8 @@
 package netxfer
 
 import (
+	"context"
+	"errors"
 	"slices"
 	"time"
 
@@ -14,7 +16,7 @@ const (
 )
 
 type DoneFunc func()
-type AbortFunc func()
+type AbortFunc func(reason Error)
 
 type sendState byte
 
@@ -65,7 +67,7 @@ func (p *sendStream[C]) Abort() {
 	if p == nil || p.x == nil {
 		return
 	}
-	p.callAborted()
+	p.callAborted(ErrClosed)
 	p.Close()
 }
 
@@ -77,7 +79,7 @@ func (p *sendStream[C]) Cancel(reason Error) {
 		RecvID: p.recvID,
 		Reason: reason,
 	})
-	p.callAborted()
+	p.callAborted(reason)
 	p.Close()
 }
 
@@ -181,9 +183,9 @@ func (p *sendStream[C]) Update(ts time.Duration) {
 	}
 }
 
-func (p *sendStream[C]) callAborted() {
+func (p *sendStream[C]) callAborted(reason Error) {
 	if p.onAbort != nil {
-		p.onAbort()
+		p.onAbort(reason)
 	}
 }
 
@@ -255,7 +257,7 @@ func (x *Sender[C]) add(s *sendStream[C]) bool {
 	return false
 }
 
-func (x *Sender[C]) Send(conn C, p Data, onDone DoneFunc, onAbort AbortFunc) bool {
+func (x *Sender[C]) StartSend(conn C, p Data, onDone DoneFunc, onAbort AbortFunc) (SendID, bool) {
 	s := &sendStream[C]{
 		x:       x,
 		conn:    conn,
@@ -265,13 +267,38 @@ func (x *Sender[C]) Send(conn C, p Data, onDone DoneFunc, onAbort AbortFunc) boo
 		onAbort: onAbort,
 	}
 	if !x.add(s) {
-		return false
+		return 0, false
 	}
 	s.Start(p)
-	return true
+	return s.id, true
 }
 
-func (x *Sender[C]) Cancel(conn C) {
+func (x *Sender[C]) Send(ctx context.Context, conn C, p Data) error {
+	done := make(chan struct{})
+	abort := make(chan Error, 1)
+	id, ok := x.StartSend(conn, p, func() {
+		close(done)
+	}, func(reason Error) {
+		select {
+		case abort <- reason:
+		default:
+		}
+	})
+	if !ok {
+		return errors.New("send failed, too many streams")
+	}
+	select {
+	case <-ctx.Done():
+		x.Cancel(conn, id)
+		return ctx.Err()
+	case err := <-abort:
+		return err
+	case <-done:
+		return nil
+	}
+}
+
+func (x *Sender[C]) CancelAll(conn C) {
 	for _, it := range x.arr {
 		if it == nil {
 			continue
@@ -280,6 +307,10 @@ func (x *Sender[C]) Cancel(conn C) {
 			it.Cancel(ErrClosed)
 		}
 	}
+}
+
+func (x *Sender[C]) Cancel(conn C, id SendID) {
+	x.getS(id).Cancel(ErrClosed)
 }
 
 func (x *Sender[C]) Update(ts time.Duration) {

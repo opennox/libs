@@ -39,8 +39,9 @@ func (s *TestState) Tick() {
 	s.Receiver.Update(s.TS)
 }
 
-func (s *TestState) SendData(p Data, onDone DoneFunc, onAbort AbortFunc) bool {
-	return s.Sender.Send(s.Recv, p, onDone, onAbort)
+func (s *TestState) StartSend(p Data, onDone DoneFunc, onAbort AbortFunc) bool {
+	_, ok := s.Sender.StartSend(s.Recv, p, onDone, onAbort)
+	return ok
 }
 
 func (c *TestConn) SendReliableMsg(m Msg) error {
@@ -106,10 +107,10 @@ func TestXferFlow(t *testing.T) {
 		gotCnt++
 		gotTS = s.TS
 	}
-	s.SendData(p, func() {
+	s.StartSend(p, func() {
 		sentTS = s.TS
-	}, func() {
-		t.Fatal("aborted")
+	}, func(reason Error) {
+		t.Fatal("aborted", reason)
 	})
 	ticks := []struct {
 		FromSend []Msg
@@ -196,12 +197,12 @@ func TestXferSize(t *testing.T) {
 				done = true
 				must.True(t, bytes.Equal(data, p.Data))
 			})
-			ok := s.SendData(Data{
+			ok := s.StartSend(Data{
 				Action: 1,
 				Type:   c.name,
 				Data:   slices.Clone(data),
-			}, nil, func() {
-				t.Fatal("aborted")
+			}, nil, func(reason Error) {
+				t.Fatal("aborted", reason)
 			})
 			must.True(t, ok, must.Sprint("send failed"))
 			for i := 0; !done; i++ {
