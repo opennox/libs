@@ -3,6 +3,7 @@ package glfw
 import (
 	"fmt"
 	"image"
+	"log/slog"
 	"os"
 
 	"github.com/go-gl/glfw/v3.3/glfw"
@@ -10,11 +11,10 @@ import (
 	"github.com/opennox/libs/client/seat"
 	"github.com/opennox/libs/client/seat/opengl"
 	"github.com/opennox/libs/env"
-	"github.com/opennox/libs/log"
+	noxlog "github.com/opennox/libs/log"
 )
 
 var (
-	Log       = log.New("glfw")
 	debug     = os.Getenv("GLFW_DEBUG") == "true"
 	debugGpad = os.Getenv("NOX_DEBUG_GPAD") == "true"
 )
@@ -22,7 +22,8 @@ var (
 var _ seat.Seat = &Window{}
 
 // New creates a new SDL window which implements a Seat interface.
-func New(title string, sz image.Point) (*Window, error) {
+func New(log *slog.Logger, title string, sz image.Point) (*Window, error) {
+	log = noxlog.WithSystem(log, "glfw")
 	// TODO: if we ever decide to use multiple windows, this will need to be moved elsewhere; same for glfw.Terminate
 	err := glfw.Init()
 	if err != nil {
@@ -47,6 +48,7 @@ func New(title string, sz image.Point) (*Window, error) {
 		panic(err)
 	}
 	h := &Window{
+		log: log,
 		win: win, prevSz: sz,
 	}
 	win.SetMouseButtonCallback(h.processMouseButtonEvent)
@@ -57,13 +59,13 @@ func New(title string, sz image.Point) (*Window, error) {
 	win.SetFocusCallback(h.processFocusEvent)
 	win.SetFramebufferSizeCallback(func(_ *glfw.Window, width int, height int) {
 		sz := image.Pt(width, height)
-		Log.Printf("framebuffer size: %v", sz)
+		log.Info("framebuffer", "size", sz)
 		for _, fnc := range h.onResize {
 			fnc(sz)
 		}
 	})
 	win.SetRefreshCallback(func(w *glfw.Window) {
-		Log.Printf("refresh")
+		log.Debug("refresh")
 	})
 	//win.SetCharCallback(func(_ *glfw.Window, c rune) {
 	//
@@ -78,6 +80,7 @@ func New(title string, sz image.Point) (*Window, error) {
 }
 
 type Window struct {
+	log      *slog.Logger
 	win      *glfw.Window
 	gl       opengl.Window
 	prevPos  image.Point
@@ -141,7 +144,7 @@ func (win *Window) ResizeScreen(sz image.Point) {
 	if win.mode != seat.Windowed {
 		return
 	}
-	Log.Printf("window size: %dx%d", sz.X, sz.Y)
+	win.log.Info("window resize", "size", sz)
 	win.win.SetSize(sz.X, sz.Y)
 	win.prevSz = sz
 }
@@ -205,7 +208,7 @@ func (win *Window) SetScreenMode(mode seat.ScreenMode) {
 	if monitor != nil {
 		name = monitor.GetName()
 	}
-	Log.Printf("set window: %q, %v @ %v, %d", name, sz, pos, refresh)
+	win.log.Info("set window", "name", name, "size", sz, "pos", pos, "rate", refresh)
 	win.win.SetMonitor(monitor, pos.X, pos.Y, sz.X, sz.Y, refresh)
 	win.setRelative(rel)
 	win.mode = mode
@@ -223,7 +226,7 @@ func (win *Window) OnScreenResize(fnc func(sz image.Point)) {
 func (win *Window) initGL() error {
 	win.win.MakeContextCurrent()
 	glfw.SwapInterval(0)
-	if err := win.gl.Init(); err != nil {
+	if err := win.gl.Init(win.log); err != nil {
 		return err
 	}
 	return nil

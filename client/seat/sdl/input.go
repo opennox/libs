@@ -52,31 +52,31 @@ func (win *Window) InputTick() {
 			win.processWheelEvent(&ev)
 		case sdl.ControllerAxisEvent:
 			if debugGpad {
-				Log.Printf("SDL event: SDL_CONTROLLERAXISMOTION (%x): joy=%d, axis=%d, val=%d\n",
-					ev.GetType(), ev.Which, ev.Axis, ev.Value)
+				win.log.Debug("SDL_CONTROLLERAXISMOTION",
+					"ev", ev.GetType(), "dev", ev.Which, "axis", ev.Axis, "val", ev.Value)
 			}
 			win.processGamepadAxisEvent(&ev)
 		case sdl.ControllerButtonEvent:
 			if debugGpad {
-				Log.Printf("SDL event: SDL_CONTROLLERBUTTON (%x): joy=%d, btn=%d, state=%d\n",
-					ev.GetType(), ev.Which, ev.Button, ev.State)
+				win.log.Debug("SDL_CONTROLLERBUTTON",
+					"ev", ev.GetType(), "dev", ev.Which, "btn", ev.Button, "state", ev.State)
 			}
 			win.processGamepadButtonEvent(&ev)
 		case *sdl.ControllerDeviceEvent:
 			switch ev.GetType() {
 			case sdl.CONTROLLERDEVICEADDED:
 				if debugGpad {
-					Log.Printf("SDL event: SDL_CONTROLLERDEVICEADDED (%x): joy=%d\n", ev.GetType(), ev.Which)
+					win.log.Debug("SDL_CONTROLLERDEVICEADDED", "ev", ev.GetType(), "dev", ev.Which)
 				}
 				win.processGamepadDeviceEvent(ev)
 			case sdl.CONTROLLERDEVICEREMOVED:
 				if debugGpad {
-					Log.Printf("SDL event: SDL_CONTROLLERDEVICEREMOVED (%x): joy=%d\n", ev.GetType(), ev.Which)
+					win.log.Debug("SDL_CONTROLLERDEVICEREMOVED", "ev", ev.GetType(), "dev", ev.Which)
 				}
 				win.processGamepadDeviceEvent(ev)
 			case sdl.CONTROLLERDEVICEREMAPPED:
 				if debugGpad {
-					Log.Printf("SDL event: SDL_CONTROLLERDEVICEREMAPPED (%x)\n", ev.GetType())
+					win.log.Debug("SDL_CONTROLLERDEVICEREMAPPED", "ev", ev.GetType())
 				}
 			}
 		case sdl.WindowEvent:
@@ -127,7 +127,7 @@ func (win *Window) processKeyboardEvent(ev *sdl.KeyboardEvent) {
 	if win.textInp && ev.State == sdl.PRESSED && sdl.GetModState()&sdl.KMOD_CTRL != 0 && ev.Keysym.Scancode == sdl.SCANCODE_V {
 		text, err := sdl.GetClipboardText()
 		if err != nil {
-			Log.Printf("cannot get clipboard text: %v", err)
+			win.log.Error("cannot get clipboard text", "err", err)
 			return
 		}
 		win.inputEvent(&seat.TextInputEvent{

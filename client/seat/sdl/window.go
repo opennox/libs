@@ -3,6 +3,7 @@ package sdl
 import (
 	"fmt"
 	"image"
+	"log/slog"
 	"os"
 
 	"github.com/veandco/go-sdl2/sdl"
@@ -10,18 +11,18 @@ import (
 	"github.com/opennox/libs/client/seat"
 	"github.com/opennox/libs/client/seat/opengl"
 	"github.com/opennox/libs/env"
-	"github.com/opennox/libs/log"
+	noxlog "github.com/opennox/libs/log"
 )
 
 var (
-	Log       = log.New("sdl")
 	debugGpad = os.Getenv("NOX_DEBUG_GPAD") == "true"
 )
 
 var _ seat.Seat = &Window{}
 
 // New creates a new SDL window which implements a Seat interface.
-func New(title string, sz image.Point) (*Window, error) {
+func New(log *slog.Logger, title string, sz image.Point) (*Window, error) {
+	log = noxlog.WithSystem(log, "sdl")
 	// That hint won't work if it is called after sdl.Init
 	sdl.SetHint(sdl.HINT_WINDOWS_DPI_AWARENESS, "permonitorv2")
 	// TODO: if we ever decide to use multiple windows, this will need to be moved elsewhere; same for sdl.Quit
@@ -52,6 +53,7 @@ func New(title string, sz image.Point) (*Window, error) {
 		return nil, fmt.Errorf("SDL Window creation failed: %w", err)
 	}
 	h := &Window{
+		log: log,
 		win: win, prevSz: sz,
 	}
 	h.SetScreenMode(seat.Windowed)
@@ -64,6 +66,7 @@ func New(title string, sz image.Point) (*Window, error) {
 }
 
 type Window struct {
+	log      *slog.Logger
 	win      *sdl.Window
 	gl       opengl.Window
 	prevPos  image.Point
@@ -114,12 +117,12 @@ func (win *Window) screenPos() image.Point {
 func (win *Window) displayRect() sdl.Rect {
 	disp, err := win.win.GetDisplayIndex()
 	if err != nil {
-		Log.Println("can't get display index: ", err)
+		win.log.Warn("can't get display index", "err", err)
 		return sdl.Rect{}
 	}
 	rect, err := sdl.GetDisplayBounds(disp)
 	if err != nil {
-		Log.Println("can't get display bounds: ", err)
+		win.log.Warn("can't get display bounds", "err", err)
 		return sdl.Rect{}
 	}
 	return rect
@@ -133,7 +136,7 @@ func (win *Window) ScreenMaxSize() image.Point {
 }
 
 func (win *Window) setSize(sz image.Point) {
-	Log.Printf("window size: %dx%d", sz.X, sz.Y)
+	win.log.Info("window", "size", sz)
 	win.win.SetSize(int32(sz.X), int32(sz.Y))
 }
 
@@ -222,7 +225,7 @@ func (win *Window) initGL() error {
 		return fmt.Errorf("OpenGL bind failed: %w", err)
 	}
 	sdl.GLSetSwapInterval(0)
-	if err := win.gl.Init(); err != nil {
+	if err := win.gl.Init(win.log); err != nil {
 		return err
 	}
 	return nil

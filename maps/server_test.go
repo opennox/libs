@@ -3,6 +3,7 @@ package maps
 import (
 	"context"
 	"io"
+	"log/slog"
 	"net"
 	"net/http"
 	"os"
@@ -95,7 +96,7 @@ func TestMapServer(t *testing.T) {
 			copyFile(t, smpath, filepath.Join(dpath, mname, mname+".map"))
 
 			// Start serving maps from source folder.
-			srv := NewServer(srcdir)
+			srv := NewServer(slog.Default(), srcdir)
 			hsrv := &http.Server{Handler: srv}
 			l, err := net.Listen("tcp", ":0")
 			must.NoError(t, err)
@@ -115,7 +116,7 @@ func TestMapServer(t *testing.T) {
 			})
 
 			ctx := context.Background()
-			cli, err := NewClient(ctx, l.Addr().String())
+			cli, err := NewClient(ctx, slog.Default(), l.Addr().String())
 			must.NoError(t, err)
 			defer cli.Close()
 

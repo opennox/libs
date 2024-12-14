@@ -4,15 +4,10 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/go-gl/gl/v3.3-core/gl"
-
-	"github.com/opennox/libs/log"
-)
-
-var (
-	Log = log.New("gl")
 )
 
 //go:embed shaders/screen.vert
@@ -22,6 +17,7 @@ var shaderVert string
 var shaderFrag string
 
 type Window struct {
+	log       *slog.Logger
 	vao       uint32
 	vbo       uint32
 	ebo       uint32
@@ -38,11 +34,12 @@ func (win *Window) SetGamma(v float32) {
 }
 
 // Init the OpenGL. Window context must be set as current by the caller.
-func (win *Window) Init() error {
+func (win *Window) Init(log *slog.Logger) error {
+	win.log = log
 	if err := gl.Init(); err != nil {
 		return fmt.Errorf("OpenGL init failed: %w", err)
 	}
-	Log.Println("OpenGL version:", gl.GoStr(gl.GetString(gl.VERSION)))
+	win.log.Info("OpenGL", "vers", gl.GoStr(gl.GetString(gl.VERSION)))
 
 	gl.GenVertexArrays(1, &win.vao)
 	gl.BindVertexArray(win.vao)

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"io/fs"
+	"log/slog"
 	"net/http"
 	"os"
 	lpath "path"
@@ -141,8 +142,12 @@ func CompressMap(w io.Writer, fss fs.FS, dir string) error {
 	})
 }
 
-func NewServer(path string) *Server {
-	s := &Server{path: path, mux: httprouter.New()}
+func NewServer(log *slog.Logger, path string) *Server {
+	s := &Server{
+		log:  log,
+		path: path,
+		mux:  httprouter.New(),
+	}
 	s.mux.Handle("HEAD", "/api/v0/maps/", s.handleMapList)
 	s.mux.Handle("GET", "/api/v0/maps/", s.handleMapList)
 
@@ -153,6 +158,7 @@ func NewServer(path string) *Server {
 }
 
 type Server struct {
+	log  *slog.Logger
 	mux  *httprouter.Router
 	path string
 }
@@ -162,7 +168,7 @@ func (s *Server) RegisterOnMux(mux *http.ServeMux) {
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	Log.Println(r.Method, r.URL)
+	s.log.Debug("http request", "method", r.Method, "url", r.URL)
 	s.mux.ServeHTTP(w, r)
 }
 
@@ -180,9 +186,9 @@ func (s *Server) handleMapList(w http.ResponseWriter, r *http.Request, p httprou
 	case "HEAD", "OPTIONS":
 		w.WriteHeader(http.StatusOK)
 	case "GET":
-		list, err := Scan(s.path, nil)
+		list, err := Scan(s.log, s.path, nil)
 		if err != nil {
-			Log.Println("error serving map list:", err)
+			s.log.Error("error serving map list", "err", err)
 			if len(list) == 0 {
 				w.WriteHeader(http.StatusInternalServerError)
 				return
@@ -204,7 +210,7 @@ func (s *Server) handleMap(w http.ResponseWriter, r *http.Request, p httprouter.
 		w.WriteHeader(http.StatusNotFound)
 		return
 	} else if err != nil {
-		Log.Printf("error serving map %q: %v", name, err)
+		s.log.Error("error serving map", "name", name, "err", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -217,6 +223,7 @@ func (s *Server) handleMapDownload(w http.ResponseWriter, r *http.Request, p htt
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
+	log := s.log.With("name", name)
 	base := filepath.Join(s.path, name)
 	base = ifs.Normalize(base)
 
@@ -229,7 +236,7 @@ func (s *Server) handleMapDownload(w http.ResponseWriter, r *http.Request, p htt
 		w.WriteHeader(http.StatusNotFound)
 		return
 	} else if err != nil {
-		Log.Printf("error serving map %q: %v", name, err)
+		log.Error("error serving map", "err", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -238,7 +245,7 @@ func (s *Server) handleMapDownload(w http.ResponseWriter, r *http.Request, p htt
 		// serve the map file itself
 		f, err := os.Open(fpath)
 		if err != nil {
-			Log.Printf("error serving map %q: %v", name, err)
+			log.Error("error serving map", "err", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -250,7 +257,7 @@ func (s *Server) handleMapDownload(w http.ResponseWriter, r *http.Request, p htt
 	w.Header().Set("Content-Type", contentTypeZIP)
 	err = CompressMap(w, nil, base)
 	if err != nil {
-		Log.Printf("error serving map %q: %v", name, err)
+		log.Error("error serving map", "err", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}

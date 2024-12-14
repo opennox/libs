@@ -88,7 +88,7 @@ func (win *Window) processKeyboardEvent(_ *glfw.Window, key glfw.Key, scancode i
 	}
 	k, ok := keymap[key]
 	if !ok {
-		Log.Printf("unknown key code: %d (0x%x)", key, key)
+		win.log.Debug("unknown key code", "key", key)
 		return
 	}
 	win.inputEvent(&seat.KeyboardEvent{

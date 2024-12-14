@@ -2,17 +2,13 @@ package maps
 
 import (
 	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 
 	"github.com/opennox/libs/ifs"
-	"github.com/opennox/libs/log"
-)
-
-var (
-	Log = log.New("map")
 )
 
 const (
@@ -52,7 +48,7 @@ type ScanOptions struct {
 	Solo bool // don't skip solo maps
 }
 
-func Scan(path string, opts *ScanOptions) (MapList, error) {
+func Scan(log *slog.Logger, path string, opts *ScanOptions) (MapList, error) {
 	if opts == nil {
 		opts = &ScanOptions{}
 	}
@@ -86,7 +82,7 @@ func Scan(path string, opts *ScanOptions) (MapList, error) {
 			if os.IsNotExist(err) {
 				continue
 			} else if err != nil {
-				Log.Printf("invalid map file: %q: %v", name, err)
+				log.Warn("invalid map file", "name", name, "err", err)
 				last = err
 				continue
 			}

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"path"
@@ -28,11 +29,12 @@ var (
 )
 
 type Client struct {
+	log  *slog.Logger
 	cli  *http.Client
 	base string
 }
 
-func NewClient(ctx context.Context, addr string) (*Client, error) {
+func NewClient(ctx context.Context, log *slog.Logger, addr string) (*Client, error) {
 	if addr == "" {
 		return nil, errors.New("no address")
 	}
@@ -40,7 +42,11 @@ func NewClient(ctx context.Context, addr string) (*Client, error) {
 		addr = fmt.Sprintf("%s:%d", addr, DefaultPort)
 	}
 	url := fmt.Sprintf("http://%s", addr)
-	cli := &Client{cli: http.DefaultClient, base: url}
+	cli := &Client{
+		log:  log,
+		cli:  http.DefaultClient,
+		base: url,
+	}
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
 	err := cli.checkAPI(ctx)
@@ -104,7 +110,7 @@ func (c *Client) DownloadMap(ctx context.Context, dest string, name string) erro
 	name = path.Base(name)
 	name = strings.TrimSuffix(strings.ToLower(name), Ext)
 	url := c.base + "/api/v0/maps/" + name + "/download"
-	Log.Println("GET", url)
+	c.log.Info("GET", "url", url)
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return fmt.Errorf("cannot create request: %w", err)
@@ -149,7 +155,7 @@ func (c *Client) DownloadMap(ctx context.Context, dest string, name string) erro
 		if err != nil {
 			return err
 		}
-		Log.Println("unpacking map zip archive:", tmp.Name())
+		c.log.Info("unpacking map zip archive", "name", tmp.Name())
 		zf, err := zip.NewReader(tmp, sz)
 		if err != nil {
 			return fmt.Errorf("zip read failed: %w", err)
@@ -157,7 +163,7 @@ func (c *Client) DownloadMap(ctx context.Context, dest string, name string) erro
 		for _, f := range zf.File {
 			path := strings.ToLower(f.Name)
 			if !IsAllowedFile(path) {
-				Log.Println("skipping disallowed file", path)
+				c.log.Info("skipping disallowed file", "name", path)
 				continue
 			}
 			path = filepath.Join(dest, path)
