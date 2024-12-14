@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 
@@ -24,6 +25,6 @@ func main() {
 }
 
 func run() error {
-	srv := maps.NewServer(*fPath)
+	srv := maps.NewServer(slog.Default(), *fPath)
 	return http.ListenAndServe(*fHost, srv)
 }
