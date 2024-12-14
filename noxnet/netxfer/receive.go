@@ -32,7 +32,7 @@ func (p *recvStream[C]) AddChunk(ts time.Duration, m *MsgData) {
 		return
 	}
 	p.lastUpdate = ts
-	_ = p.conn.SendReliableMsg(&MsgXfer{&MsgAck{
+	_ = p.conn.SendReliable(&MsgXfer{&MsgAck{
 		RecvID: p.id,
 		Token:  m.Token,
 		Chunk:  m.Chunk,
@@ -114,7 +114,7 @@ func (p *recvStream[C]) Abort(reason Error) {
 	if p == nil || p.x == nil {
 		return
 	}
-	_ = p.conn.SendReliableMsg(&MsgXfer{&MsgAbort{
+	_ = p.conn.SendReliable(&MsgXfer{&MsgAbort{
 		RecvID: p.id,
 		Reason: reason,
 	}})
@@ -125,7 +125,7 @@ func (p *recvStream[C]) Done() {
 	if p == nil || p.x == nil {
 		return
 	}
-	_ = p.conn.SendReliableMsg(&MsgXfer{&MsgDone{
+	_ = p.conn.SendReliable(&MsgXfer{&MsgDone{
 		RecvID: p.id,
 	}})
 	if p.x.onReceive != nil {
@@ -138,7 +138,7 @@ func (p *recvStream[C]) Accept(sid SendID) {
 	if p == nil || p.x == nil {
 		return
 	}
-	_ = p.conn.SendReliableMsg(&MsgXfer{&MsgAccept{
+	_ = p.conn.SendReliable(&MsgXfer{&MsgAccept{
 		RecvID: p.id,
 		SendID: sid,
 	}})

@@ -20,10 +20,12 @@ import (
 
 func TestDecodePacket(t *testing.T) {
 	var cases = []struct {
-		name    string
-		skip    bool
-		packet  netmsg.Message
-		packets []netmsg.Message
+		name     string
+		skip     bool
+		packet   netmsg.Message
+		packets  []netmsg.Message
+		toClient bool
+		enc      netmsg.State
 	}{
 		{
 			name: "server info",
@@ -284,12 +286,12 @@ func TestDecodePacket(t *testing.T) {
 			name: "update stream 21",
 			skip: !decodeUpdateStream,
 			packet: &MsgUpdateStream{
-				ID:  UpdateAlias(1),
+				ID:  &UpdateAlias{1},
 				Pos: image.Point{X: 3592, Y: 3868},
 				Objects: []ObjectUpdate{
-					{ID: UpdateAlias(194), Pos: image.Point{X: 3593, Y: 3868}},
-					{ID: UpdateAlias(64), Pos: image.Point{X: 3592, Y: 3870}},
-					{ID: UpdateAlias(209), Pos: image.Point{X: 3829, Y: 3900}},
+					{ID: &UpdateAlias{194}, Pos: image.Point{X: 3593, Y: 3868}},
+					{ID: &UpdateAlias{64}, Pos: image.Point{X: 3592, Y: 3870}},
+					{ID: &UpdateAlias{209}, Pos: image.Point{X: 3829, Y: 3900}},
 				},
 			},
 		},
@@ -297,9 +299,52 @@ func TestDecodePacket(t *testing.T) {
 			name: "update stream 29",
 			skip: !decodeUpdateStream,
 			packet: &MsgUpdateStream{
-				ID:      UpdateAlias(1),
+				ID:      &UpdateAlias{1},
 				Pos:     image.Point{X: 3592, Y: 3868},
 				Objects: []ObjectUpdate{},
+			},
+		},
+		{
+			name: "inform string id",
+			packet: &MsgInform{
+				Inform: &InformStringID{
+					StringID: "use.c:HadAbility",
+				},
+			},
+		},
+		{
+			name: "audio player event",
+			packet: &netmsg.Unknown{
+				Op:   netmsg.MSG_AUDIO_PLAYER_EVENT,
+				Data: []uint8{0x00, 0x24, 0xcb},
+			},
+		},
+		{
+			name:     "important cli",
+			packet:   &MsgImportantCli{},
+			toClient: true,
+		},
+		{
+			name: "important seq",
+			packet: &MsgSeqImportant{
+				ID:  1,
+				Msg: &MsgAbilityAward{Ability: 1, Level: 5},
+			},
+		},
+		{
+			name: "respawn",
+			packet: &MsgPlayerRespawn{
+				NetCode: 192,
+				Unk2:    645,
+				Unk6:    0xff,
+				Unk7:    1,
+			},
+		},
+		{
+			name: "client status",
+			packet: &netmsg.Unknown{
+				Op:   netmsg.MSG_REPORT_CLIENT_STATUS,
+				Data: []uint8{0xc0, 0x00, 0x00, 0x00, 0x00, 0x00},
 			},
 		},
 	}
@@ -309,6 +354,7 @@ func TestDecodePacket(t *testing.T) {
 			if c.skip {
 				t.SkipNow()
 			}
+			c.enc.IsClient = c.toClient
 			fname := filepath.Join("testdata", strings.ReplaceAll(c.name, " ", "_")+".dat")
 			data, err := os.ReadFile(fname)
 			if errors.Is(err, fs.ErrNotExist) {
@@ -319,21 +365,23 @@ func TestDecodePacket(t *testing.T) {
 			}
 			must.NoError(t, err)
 			if c.packet != nil {
-				p, n, err := netmsg.DecodeAny(data)
+				p, n, err := c.enc.DecodeNext(data)
 				must.NoError(t, err)
 				must.Eq(t, c.packet, p)
 				must.EqOp(t, len(data), n)
-				buf, err := netmsg.Append(nil, p)
+				buf, err := c.enc.Append(nil, p)
 				must.NoError(t, err)
 				must.Eq(t, data, buf)
-				n, err = netmsg.Decode(data, p)
-				must.NoError(t, err)
-				must.EqOp(t, len(data), n)
+				if _, ok := p.(*netmsg.Unknown); !ok {
+					n, err = c.enc.Decode(data, p)
+					must.NoError(t, err)
+					must.EqOp(t, len(data), n)
+				}
 			} else if len(c.packets) != 0 {
 				left := data
 				var got []netmsg.Message
 				for len(left) > 0 {
-					p, n, err := netmsg.DecodeAny(left)
+					p, n, err := c.enc.DecodeNext(left)
 					must.NoError(t, err)
 					left = left[n:]
 					got = append(got, p)
@@ -342,7 +390,7 @@ func TestDecodePacket(t *testing.T) {
 				must.EqOp(t, 0, len(left))
 				var buf []byte
 				for _, p := range got {
-					buf, err = netmsg.Append(buf, p)
+					buf, err = c.enc.Append(buf, p)
 					must.NoError(t, err)
 				}
 				must.Eq(t, data, buf)

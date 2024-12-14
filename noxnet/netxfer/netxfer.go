@@ -26,8 +26,8 @@ type Data struct {
 
 type Conn interface {
 	comparable
-	SendReliableMsg(m netmsg.Message) error
-	SendUnreliableMsg(m netmsg.Message) error
+	SendReliable(m netmsg.Message) error
+	SendUnreliable(m netmsg.Message) error
 }
 
 type State[C Conn] struct {

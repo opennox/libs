@@ -45,14 +45,14 @@ func (s *TestState) StartSend(p Data, onDone DoneFunc, onAbort AbortFunc) bool {
 	return ok
 }
 
-func (c *TestConn) SendReliableMsg(p netmsg.Message) error {
+func (c *TestConn) SendReliable(p netmsg.Message) error {
 	m := p.(*MsgXfer).Msg
 	c.Buf = append(c.Buf, m)
 	c.Recv.Handle(c.Peer, c.s.TS, m)
 	return nil
 }
 
-func (c *TestConn) SendUnreliableMsg(p netmsg.Message) error {
+func (c *TestConn) SendUnreliable(p netmsg.Message) error {
 	m := p.(*MsgXfer).Msg
 	c.Buf = append(c.Buf, m)
 	c.Recv.Handle(c.Peer, c.s.TS, m)

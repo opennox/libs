@@ -21,8 +21,8 @@ const (
 
 const (
 	MaxStreams     = 128
-	ServerStreamID = StreamID(0)
-	MaxStreamID    = StreamID(MaxStreams - 1)
+	ServerStreamID = SID(0)
+	MaxStreamID    = SID(MaxStreams - 1)
 	maskID         = byte(MaxStreams - 1) // 0x7F
 	reliableFlag   = byte(MaxStreams)     // 0x80
 )
@@ -61,7 +61,7 @@ func (f *onMessageFuncs) Add(fnc OnMessageFunc) {
 	f.funcs = append(f.funcs, fnc)
 }
 
-func (f *onMessageFuncs) Call(conn *Conn, sid StreamID, m netmsg.Message, flags PacketFlags) bool {
+func (f *onMessageFuncs) Call(s Stream, m netmsg.Message, flags PacketFlags) bool {
 	if f == nil {
 		return false
 	}
@@ -69,14 +69,39 @@ func (f *onMessageFuncs) Call(conn *Conn, sid StreamID, m netmsg.Message, flags 
 	list := f.funcs
 	f.mu.RUnlock()
 	for _, fnc := range list {
-		if fnc(conn, sid, m, flags) {
+		if fnc(s, m, flags) {
 			return true
 		}
 	}
 	return false
 }
 
-type StreamID byte
+type Header struct {
+	SID   SID
+	Seq   Seq
+	Flags PacketFlags
+}
+
+func (h *Header) Decode(b [2]byte) {
+	h.SID = SID(b[0] & maskID)
+	h.Flags = Unreliable
+	if b[0]&reliableFlag != 0 {
+		h.Flags |= Reliable
+	}
+	h.Seq = Seq(b[1])
+}
+
+func (h Header) Encode() [2]byte {
+	b1 := byte(h.SID) & maskID
+	if h.Flags.Has(Reliable) {
+		b1 |= reliableFlag
+	}
+	b2 := byte(h.Seq)
+	return [2]byte{b1, b2}
+}
+
+// SID is a stream ID.
+type SID byte
 type PacketFlags byte
 
 func (f PacketFlags) Has(f2 PacketFlags) bool {
@@ -84,27 +109,29 @@ func (f PacketFlags) Has(f2 PacketFlags) bool {
 }
 
 const (
-	PacketReliable = PacketFlags(1 << iota)
+	Unreliable = PacketFlags(0)
+	Reliable   = PacketFlags(1 << iota)
 )
 
-type OnMessageFunc func(conn *Conn, sid StreamID, m netmsg.Message, flags PacketFlags) bool
+type OnMessageFunc func(s Stream, m netmsg.Message, flags PacketFlags) bool
 
-func NewPort(log *slog.Logger, conn PacketConn, isServer bool) *Port {
+func NewPort(log *slog.Logger, conn PacketConn, opts netmsg.Options) *Port {
 	if log == nil {
 		log = slog.Default()
 	}
 	return &Port{
-		log:      log,
-		conn:     conn,
-		isServer: isServer,
-		debug:    log.Enabled(context.Background(), slog.LevelDebug),
-		byAddr:   make(map[netip.AddrPort]*Conn),
-		closed:   make(chan struct{}),
+		log:    log,
+		opts:   opts,
+		conn:   conn,
+		debug:  log.Enabled(context.Background(), slog.LevelDebug),
+		byAddr: make(map[netip.AddrPort]*Conn),
+		closed: make(chan struct{}),
 	}
 }
 
 type Port struct {
-	log *slog.Logger
+	log  *slog.Logger
+	opts netmsg.Options
 
 	wmu  sync.Mutex
 	wbuf []byte
@@ -116,9 +143,8 @@ type Port struct {
 	hmu    sync.RWMutex
 	byAddr map[netip.AddrPort]*Conn
 
-	closed   chan struct{}
-	isServer bool
-	debug    bool
+	closed chan struct{}
+	debug  bool
 }
 
 func (p *Port) Close() {
@@ -173,6 +199,7 @@ func (p *Port) Conn(addr netip.AddrPort) *Conn {
 		addr: addr,
 		log:  p.log.With("remote", addr),
 	}
+	h.enc.Options = p.opts
 	if p.OnConn != nil && !p.OnConn(h) {
 		return nil
 	}
@@ -180,28 +207,18 @@ func (p *Port) Conn(addr netip.AddrPort) *Conn {
 	return h
 }
 
-func (p *Port) writeRaw(addr netip.AddrPort, b1, b2 byte, data []byte, xor byte) error {
-	p.wmu.Lock()
-	defer p.wmu.Unlock()
-	p.wbuf = p.wbuf[:0]
-	p.wbuf = append(p.wbuf, b1, b2)
-	p.wbuf = append(p.wbuf, data...)
-	if xor != 0 {
-		xorBuf(xor, p.wbuf)
-	}
-	_, err := p.conn.WriteToUDPAddrPort(p.wbuf, addr)
-	return err
-}
-
-func (p *Port) WriteMsg(addr netip.AddrPort, b1, b2 byte, m netmsg.Message, xor byte) error {
+func (p *Port) WriteMsg(addr netip.AddrPort, xor byte, hdr Header, enc *netmsg.State, msgs ...netmsg.Message) error {
+	h := hdr.Encode()
 	p.wmu.Lock()
 	defer p.wmu.Unlock()
 	var err error
 	p.wbuf = p.wbuf[:0]
-	p.wbuf = append(p.wbuf, b1, b2)
-	p.wbuf, err = netmsg.Append(p.wbuf, m)
-	if err != nil {
-		return err
+	p.wbuf = append(p.wbuf, h[0], h[1])
+	for _, m := range msgs {
+		p.wbuf, err = enc.Append(p.wbuf, m)
+		if err != nil {
+			return err
+		}
 	}
 	if xor != 0 {
 		xorBuf(xor, p.wbuf)
@@ -215,7 +232,7 @@ func (p *Port) BroadcastMsg(port int, m netmsg.Message) error {
 		port = DefaultPort
 	}
 	addr := netip.AddrPortFrom(broadcastIP4, uint16(port))
-	return p.WriteMsg(addr, 0, 0, m, 0)
+	return p.WriteMsg(addr, 0, Header{Flags: Unreliable}, nil, m)
 }
 
 func (p *Port) Start() {
@@ -274,42 +291,53 @@ func xorBuf(key byte, p []byte) {
 	}
 }
 
-func seqBefore(v, cur byte) bool {
-	return v <= cur || (v >= 0xff-maxAckMsgs && cur-v < maxAckMsgs)
+type Seq byte
+
+func (v Seq) Before(v2 Seq) bool {
+	return v <= v2 || (v >= 0xff-maxAckMsgs && v2-v < maxAckMsgs)
 }
 
-type PacketID uintptr
+// PID is a packet ID.
+type PID uintptr
 
 type packet struct {
-	pid      PacketID
-	sid      StreamID
-	seq      byte
+	pid      PID
+	hdr      Header
 	xor      byte
 	lastSend time.Time
 	deadline time.Time
-	data     []byte
+	msgs     []netmsg.Message
 	done     func()
 	timeout  func()
+}
+
+func (p *packet) QueueID() QueueID {
+	return QueueID{
+		Stream: p.hdr.SID,
+		Packet: p.pid,
+	}
 }
 
 type Conn struct {
 	p    *Port
 	log  *slog.Logger
 	addr netip.AddrPort
+	enc  netmsg.State
 
 	packetID atomic.Uintptr
 	mu       sync.RWMutex
 	xor      byte
-	syn      byte
-	ack      byte
+	syn      Seq
+	ack      Seq
 	needAck  int
 	nextPing time.Time
 	queue    []*packet
 
 	onMessage onMessageFuncs
+}
 
-	smu  sync.RWMutex
-	byID [MaxStreams]*Stream
+func (p *Conn) EncodeState() *netmsg.State {
+	return &p.enc
 }
 
 func (p *Conn) Port() *Port {
@@ -347,25 +375,26 @@ func (p *Conn) handlePacket(data []byte) {
 	if xor := p.xor; xor != 0 {
 		xorBuf(xor, data)
 	}
-	b1, b2 := data[0], data[1]
+	var h Header
+	h.Decode([2]byte{data[0], data[1]})
+	reliable := h.Flags.Has(Reliable)
 	data = data[2:]
-	reliable, sid, seq := b1&reliableFlag != 0, StreamID(b1&maskID), b2
 	if p.p.debug {
 		sdata := hex.EncodeToString(data)
 		if reliable {
-			p.log.Debug("RECV", "syn", seq, "sid", sid, "data", sdata)
+			p.log.Debug("RECV", "syn", h.Seq, "sid", h.SID, "data", sdata)
 		} else {
-			p.log.Debug("RECV", "ack", seq, "sid", sid, "data", sdata)
+			p.log.Debug("RECV", "ack", h.Seq, "sid", h.SID, "data", sdata)
 		}
 	}
 	if reliable {
 		// New reliable message that we should ACK in the future.
 		exp := p.ack
-		if seq != exp {
+		if h.Seq != exp {
 			p.mu.Unlock()
 			return // Ignore out of order packets.
 		}
-		p.ack = seq + 1
+		p.ack = h.Seq + 1
 		p.needAck++
 		if p.needAck-1 >= maxAckMsgs {
 			_ = p.sendAckPing()
@@ -375,7 +404,7 @@ func (p *Conn) handlePacket(data []byte) {
 	} else {
 		// Unreliable message with ACK for our reliable messages.
 		p.queue = slices.DeleteFunc(p.queue, func(m *packet) bool {
-			del := seqBefore(m.seq, seq)
+			del := m.hdr.Seq.Before(h.Seq)
 			if del && m.done != nil {
 				doneFuncs = append(doneFuncs, m.done)
 			}
@@ -383,10 +412,7 @@ func (p *Conn) handlePacket(data []byte) {
 		})
 	}
 	p.mu.Unlock()
-	var onMsgID *onMessageFuncs
-	if s := p.getWithID(sid); s != nil {
-		onMsgID = &s.onMessage
-	}
+	s := p.Stream(h.SID)
 	onMsg := &p.onMessage
 	onMsgGlobal := &p.p.onMessage
 	for _, done := range doneFuncs {
@@ -395,10 +421,10 @@ func (p *Conn) handlePacket(data []byte) {
 
 	var flags PacketFlags
 	if reliable {
-		flags |= PacketReliable
+		flags |= Reliable
 	}
 	for len(data) > 0 {
-		m, n, err := netmsg.DecodeAny(data)
+		m, n, err := p.enc.DecodeNext(data)
 		if err != nil {
 			op := data[0]
 			p.log.Error("Failed to decode packet", "op", op, "err", err)
@@ -408,63 +434,82 @@ func (p *Conn) handlePacket(data []byte) {
 		if p.p.debug {
 			p.log.Debug("RECV", "type", reflect.TypeOf(m).String(), "msg", m)
 		}
-		if onMsgID.Call(p, sid, m, flags) {
+		if onMsg.Call(s, m, flags) {
 			continue
 		}
-		if onMsg.Call(p, sid, m, flags) {
-			continue
-		}
-		if onMsgGlobal.Call(p, sid, m, flags) {
+		if onMsgGlobal.Call(s, m, flags) {
 			continue
 		}
 	}
 }
 
-func (p *Conn) ViewQueue(fnc func(sid StreamID, data []byte)) {
+type QueueID struct {
+	Stream SID
+	Packet PID
+}
+
+func (p *Conn) ViewQueue(fnc func(id QueueID, m netmsg.Message)) {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 	for _, m := range p.queue {
-		fnc(m.sid, m.data)
+		id := m.QueueID()
+		for _, msg := range m.msgs {
+			fnc(id, msg)
+		}
 	}
 }
 
-func (p *Conn) QueuedFor(sid StreamID) int {
+func (p *Conn) QueuedFor(sid SID, ops ...netmsg.Op) int {
 	n := 0
-	p.ViewQueue(func(sid2 StreamID, data []byte) {
-		if sid == sid2 {
+	p.ViewQueue(func(id QueueID, m netmsg.Message) {
+		if sid != id.Stream {
+			return
+		}
+		if len(ops) == 0 || slices.Contains(ops, m.NetOp()) {
 			n++
 		}
 	})
 	return n
 }
 
-func (p *Conn) UpdateQueue(fnc func(pid PacketID, sid StreamID, data []byte) bool) {
+func (p *Conn) DeleteQueue(fnc func(id QueueID, msgs []netmsg.Message) bool) {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 	p.queue = slices.DeleteFunc(p.queue, func(m *packet) bool {
-		return !fnc(m.pid, m.sid, m.data)
+		return fnc(m.QueueID(), m.msgs)
 	})
 }
 
-func (p *Conn) ResetFor(sid StreamID) {
-	p.UpdateQueue(func(_ PacketID, sid2 StreamID, _ []byte) bool {
-		return sid != sid2 // remove sid == sid2
+func (p *Conn) ResetFor(sid SID) {
+	p.DeleteQueue(func(id QueueID, _ []netmsg.Message) bool {
+		return sid == id.Stream
 	})
 }
 
-func (p *Conn) sendUnreliable(sid StreamID, data []byte) error {
+func (p *Conn) SendUnreliable(sid SID, msgs ...netmsg.Message) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.sendUnreliable(sid, msgs...)
+}
+
+func (p *Conn) sendUnreliable(sid SID, msgs ...netmsg.Message) error {
 	seq := p.ack
 	p.nextPing = time.Time{}
 	if p.p.debug {
-		p.log.Debug("SEND", "ack", seq, "sid", sid, "data", hex.EncodeToString(data))
+		typ := ""
+		if len(msgs) > 0 {
+			typ = reflect.TypeOf(msgs[0]).String()
+		}
+		p.log.Debug("SEND", "ack", seq, "sid", sid, "type", typ, "msgs", msgs)
 	}
-	return p.p.writeRaw(p.addr, byte(sid)&maskID, seq, data, p.xor)
+	h := Header{SID: sid, Seq: seq, Flags: Unreliable}
+	return p.p.WriteMsg(p.addr, p.xor, h, &p.enc, msgs...)
 }
 
 func (p *Conn) sendAckPing() error {
 	p.needAck = 0
 	p.nextPing = time.Time{}
-	return p.sendUnreliable(0, nil)
+	return p.sendUnreliable(0)
 }
 
 func (p *Conn) Ack() error {
@@ -473,71 +518,55 @@ func (p *Conn) Ack() error {
 	return p.sendAckPing()
 }
 
-func (p *Conn) SendUnreliable(sid StreamID, data []byte) error {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	return p.sendUnreliable(sid, data)
+type Options struct {
+	Context   context.Context
+	Deadline  time.Time
+	OnDone    func()
+	OnTimeout func()
 }
 
-func (p *Conn) SendUnreliableMsg(sid StreamID, m netmsg.Message) error {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	seq := p.ack
-	p.nextPing = time.Time{}
-	if p.p.debug {
-		p.log.Debug("SEND", "ack", seq, "sid", sid, "type", reflect.TypeOf(m).String(), "msg", m)
-	}
-	return p.p.WriteMsg(p.addr, byte(sid)&maskID, seq, m, p.xor)
-}
-
-func (p *Conn) QueueReliable(ctx context.Context, sid StreamID, data []byte, done, timeout func()) PacketID {
-	data = slices.Clone(data)
+func (p *Conn) QueueReliable(sid SID, opts Options, msgs ...netmsg.Message) PID {
+	msgs = slices.Clone(msgs)
 	now := time.Now()
-	deadline, ok := ctx.Deadline()
-	if !ok {
+	var deadline time.Time
+	if !opts.Deadline.IsZero() {
+		deadline = opts.Deadline
+	}
+	if opts.Context != nil {
+		deadline, _ = opts.Context.Deadline()
+	}
+	if deadline.IsZero() {
 		deadline = now.Add(defaultTimeout)
 	}
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	seq := p.syn
 	p.syn++
-	pid := PacketID(p.packetID.Add(1))
+	pid := PID(p.packetID.Add(1))
 	p.queue = append(p.queue, &packet{
-		pid:      pid,
-		sid:      sid,
-		seq:      seq,
+		pid: pid,
+		hdr: Header{
+			SID:   sid,
+			Seq:   seq,
+			Flags: Reliable,
+		},
 		xor:      p.xor,
 		lastSend: time.Time{}, // send in the next tick
 		deadline: deadline,
-		data:     data,
-		done:     done,
-		timeout:  timeout,
+		msgs:     msgs,
+		done:     opts.OnDone,
+		timeout:  opts.OnTimeout,
 	})
 	return pid
 }
 
-func (p *Conn) CancelReliable(pid PacketID) {
-	p.UpdateQueue(func(pid2 PacketID, _ StreamID, _ []byte) bool {
-		return pid != pid2 // remove pid == pid2
+func (p *Conn) CancelReliable(pid PID) {
+	p.DeleteQueue(func(id QueueID, _ []netmsg.Message) bool {
+		return pid != id.Packet
 	})
 }
 
-func (p *Conn) QueueReliableMsg(ctx context.Context, sid StreamID, arr []netmsg.Message, done, timeout func()) (PacketID, error) {
-	var (
-		data []byte
-		err  error
-	)
-	for _, m := range arr {
-		data, err = netmsg.Append(data, m)
-		if err != nil {
-			return 0, err
-		}
-	}
-	pid := p.QueueReliable(ctx, sid, data, done, timeout)
-	return pid, nil
-}
-
-func (p *Conn) SendReliable(ctx context.Context, sid StreamID, data []byte) error {
+func (p *Conn) SendReliable(ctx context.Context, sid SID, msgs ...netmsg.Message) error {
 	var cancel func()
 	if _, ok := ctx.Deadline(); !ok {
 		ctx, cancel = context.WithTimeout(ctx, defaultTimeout)
@@ -546,9 +575,13 @@ func (p *Conn) SendReliable(ctx context.Context, sid StreamID, data []byte) erro
 	}
 	defer cancel()
 	acked := make(chan struct{})
-	pid := p.QueueReliable(ctx, sid, data, func() {
-		close(acked)
-	}, cancel)
+	pid := p.QueueReliable(sid, Options{
+		Context: ctx,
+		OnDone: func() {
+			close(acked)
+		},
+		OnTimeout: cancel,
+	}, msgs...)
 	if err := p.sendQueue(func(p *packet) bool {
 		return p.pid == pid
 	}); err != nil {
@@ -560,14 +593,6 @@ func (p *Conn) SendReliable(ctx context.Context, sid StreamID, data []byte) erro
 	case <-acked:
 		return nil
 	}
-}
-
-func (p *Conn) SendReliableMsg(ctx context.Context, sid StreamID, m netmsg.Message) error {
-	data, err := netmsg.Append(nil, m)
-	if err != nil {
-		return err
-	}
-	return p.SendReliable(ctx, sid, data)
 }
 
 func (p *Conn) sendQueue(filter func(p *packet) bool) error {
@@ -595,9 +620,9 @@ func (p *Conn) sendQueue(filter func(p *packet) bool) error {
 		if m.lastSend.Add(resendInterval).Before(now) {
 			m.lastSend = now
 			if p.p.debug {
-				p.log.Debug("SEND", "syn", m.seq, "sid", m.sid, "data", hex.EncodeToString(m.data))
+				p.log.Debug("SEND", "syn", m.hdr.Seq, "sid", m.hdr.SID, "msgs", m.msgs)
 			}
-			if err := p.p.writeRaw(p.addr, byte(m.sid)|reliableFlag, m.seq, m.data, m.xor); err != nil {
+			if err := p.p.WriteMsg(p.addr, m.xor, m.hdr, &p.enc, m.msgs...); err != nil {
 				lastErr = err
 			}
 		}
@@ -618,87 +643,62 @@ func (p *Conn) SendQueue() error {
 	return p.sendQueue(nil)
 }
 
-func (p *Conn) getWithID(sid StreamID) *Stream {
-	p.smu.RLock()
-	defer p.smu.RUnlock()
-	return p.byID[sid]
-}
-
-func (p *Conn) WithID(sid StreamID) *Stream {
-	p.smu.RLock()
-	s := p.byID[sid]
-	p.smu.RUnlock()
-	if s != nil {
-		return s
-	}
-	p.smu.Lock()
-	defer p.smu.Unlock()
-	s = p.byID[sid]
-	if s != nil {
-		return s
-	}
-	s = &Stream{p: p, sid: sid}
-	p.byID[sid] = s
-	return s
+func (p *Conn) Stream(sid SID) Stream {
+	return Stream{p: p, sid: sid}
 }
 
 type Stream struct {
 	p   *Conn
-	sid StreamID
-
-	onMessage onMessageFuncs
+	sid SID
 }
 
-func (p *Stream) Conn() *Conn {
+func (p Stream) Valid() bool {
+	return p.p != nil
+}
+
+func (p Stream) Conn() *Conn {
 	return p.p
 }
 
-func (p *Stream) SID() StreamID {
+func (p Stream) SID() SID {
 	return p.sid
 }
 
-func (p *Stream) Addr() netip.AddrPort {
+func (p Stream) Addr() netip.AddrPort {
 	return p.p.RemoteAddr()
 }
 
-func (p *Stream) Reset() {
+func (p Stream) Reset() {
 	p.p.ResetFor(p.sid)
 }
 
-func (p *Stream) SendQueue() error {
+func (p Stream) SendQueue() error {
 	return p.p.sendQueue(func(m *packet) bool {
-		return m.sid == p.sid
+		return m.hdr.SID == p.sid
 	})
 }
 
-func (p *Stream) OnMessage(fnc OnMessageFunc) {
-	p.onMessage.Add(fnc)
+func (p Stream) OnMessage(fnc OnMessageFunc) {
+	p.p.onMessage.Add(func(s Stream, m netmsg.Message, flags PacketFlags) bool {
+		if p != s {
+			return false
+		}
+		return fnc(s, m, flags)
+	})
 }
 
-func (p *Stream) SendUnreliable(data []byte) error {
-	return p.p.SendUnreliable(p.sid, data)
+func (p Stream) SendUnreliable(msgs ...netmsg.Message) error {
+	return p.p.SendUnreliable(p.sid, msgs...)
 }
 
-func (p *Stream) SendUnreliableMsg(m netmsg.Message) error {
-	return p.p.SendUnreliableMsg(p.sid, m)
+func (p Stream) QueueReliable(opts Options, msgs ...netmsg.Message) PID {
+	return p.p.QueueReliable(p.sid, opts, msgs...)
 }
 
-func (p *Stream) QueueReliable(ctx context.Context, data []byte, done, timeout func()) PacketID {
-	return p.p.QueueReliable(ctx, p.sid, data, done, timeout)
-}
-
-func (p *Stream) CancelReliable(id PacketID) {
+func (p Stream) CancelReliable(id PID) {
 	p.p.CancelReliable(id)
 }
 
-func (p *Stream) QueueReliableMsg(ctx context.Context, arr []netmsg.Message, done, timeout func()) (PacketID, error) {
-	return p.p.QueueReliableMsg(ctx, p.sid, arr, done, timeout)
-}
-
-func (p *Stream) SendReliable(ctx context.Context, data []byte) error {
-	return p.p.SendReliable(ctx, p.sid, data)
-}
-
-func (p *Stream) SendReliableMsg(ctx context.Context, m netmsg.Message) error {
-	return p.p.SendReliableMsg(ctx, p.sid, m)
+func (p Stream) SendReliable(ctx context.Context, msgs ...netmsg.Message) error {
+	return p.p.SendReliable(ctx, p.sid, msgs...)
 }

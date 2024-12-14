@@ -10,6 +10,7 @@ import (
 
 func init() {
 	netmsg.Register(&MsgNewPlayer{}, false)
+	netmsg.Register(&MsgPlayerRespawn{}, false)
 }
 
 type PlayerInfo struct {
@@ -91,7 +92,7 @@ func (p *PlayerInfo) Decode(data []byte) (int, error) {
 }
 
 type MsgNewPlayer struct {
-	NetCode    uint16        // 0-1
+	NetCode    NetCode       // 0-1
 	PlayerInfo               // 2-98
 	Lessons    uint16        // 99-100
 	Unk101     uint16        // 101-102
@@ -116,7 +117,7 @@ func (p *MsgNewPlayer) Encode(data []byte) (int, error) {
 	if len(data) < 128 {
 		return 0, io.ErrShortBuffer
 	}
-	binary.LittleEndian.PutUint16(data[0:2], p.NetCode)
+	binary.LittleEndian.PutUint16(data[0:2], uint16(p.NetCode))
 	_, err := p.PlayerInfo.Encode(data[2:99])
 	if err != nil {
 		return 0, err
@@ -137,7 +138,7 @@ func (p *MsgNewPlayer) Decode(data []byte) (int, error) {
 	if len(data) < 128 {
 		return 0, io.ErrUnexpectedEOF
 	}
-	p.NetCode = binary.LittleEndian.Uint16(data[0:2])
+	p.NetCode = NetCode(binary.LittleEndian.Uint16(data[0:2]))
 	_, err := p.PlayerInfo.Decode(data[2:99])
 	if err != nil {
 		return 0, err
@@ -152,4 +153,41 @@ func (p *MsgNewPlayer) Decode(data []byte) (int, error) {
 	p.Unk117 = data[117]
 	p.Unk118.Decode(data[118:128])
 	return 128, nil
+}
+
+type MsgPlayerRespawn struct {
+	NetCode NetCode
+	Unk2    uint32
+	Unk6    byte
+	Unk7    byte
+}
+
+func (*MsgPlayerRespawn) NetOp() netmsg.Op {
+	return netmsg.MSG_PLAYER_RESPAWN
+}
+
+func (*MsgPlayerRespawn) EncodeSize() int {
+	return 8
+}
+
+func (p *MsgPlayerRespawn) Encode(data []byte) (int, error) {
+	if len(data) < 8 {
+		return 0, io.ErrShortBuffer
+	}
+	binary.LittleEndian.PutUint16(data[0:2], uint16(p.NetCode))
+	binary.LittleEndian.PutUint32(data[2:6], p.Unk2)
+	data[6] = p.Unk6
+	data[7] = p.Unk7
+	return 8, nil
+}
+
+func (p *MsgPlayerRespawn) Decode(data []byte) (int, error) {
+	if len(data) < 8 {
+		return 0, io.ErrUnexpectedEOF
+	}
+	p.NetCode = NetCode(binary.LittleEndian.Uint16(data[0:2]))
+	p.Unk2 = binary.LittleEndian.Uint32(data[2:6])
+	p.Unk6 = data[6]
+	p.Unk7 = data[7]
+	return 8, nil
 }

@@ -15,7 +15,7 @@ import (
 func TestSeqBefore(t *testing.T) {
 	cases := []struct {
 		name   string
-		v, cur byte
+		v, cur Seq
 		exp    bool
 	}{
 		{"zero", 0, 0, true},
@@ -27,7 +27,7 @@ func TestSeqBefore(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			must.EqOp(t, c.exp, seqBefore(c.v, c.cur))
+			must.EqOp(t, c.exp, c.v.Before(c.cur))
 		})
 	}
 }
@@ -48,12 +48,12 @@ func TestStream(t *testing.T) {
 
 		srvRecv := make(chan netmsg.Message, maxMessages)
 		srv := srvC.Port
-		srv.OnMessage(func(conn *Conn, sid StreamID, m netmsg.Message, flags PacketFlags) bool {
+		srv.OnMessage(func(s Stream, m netmsg.Message, flags PacketFlags) bool {
 			if debug {
 				t.Logf("server recv: %#v", m)
 			}
 			if fast {
-				_ = conn.Ack()
+				_ = s.Conn().Ack()
 			}
 			srvRecv <- m
 			return true
@@ -61,7 +61,7 @@ func TestStream(t *testing.T) {
 		t.Cleanup(srv.Close)
 
 		cli := cliC.Port
-		cli.OnMessage(func(conn *Conn, sid StreamID, m netmsg.Message, flags PacketFlags) bool {
+		cli.OnMessage(func(s Stream, m netmsg.Message, flags PacketFlags) bool {
 			if debug {
 				t.Logf("client recv: %#v", m)
 			}
@@ -86,7 +86,7 @@ func TestStream(t *testing.T) {
 
 		for i := 0; i < maxMessages; i++ {
 			exp := &discover.MsgDiscover{Token: uint32(i + 1)}
-			err := cliConn.SendReliableMsg(ctx, 0, exp)
+			err := cliConn.SendReliable(ctx, 0, exp)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -109,10 +109,7 @@ func TestStream(t *testing.T) {
 		var expected []netmsg.Message
 		for i := 0; i < maxMessages; i++ {
 			exp := &discover.MsgDiscover{Token: uint32(i + 1)}
-			_, err := cliConn.QueueReliableMsg(ctx, 0, []netmsg.Message{exp}, nil, nil)
-			if err != nil {
-				t.Fatal(err)
-			}
+			cliConn.QueueReliable(0, Options{Context: ctx}, exp)
 			expected = append(expected, exp)
 		}
 		for _, exp := range expected {
@@ -139,7 +136,7 @@ func TestStream(t *testing.T) {
 		ctx := context.Background()
 
 		exp := &discover.MsgDiscover{Token: 0x123}
-		err := cliConn.SendReliableMsg(ctx, 0, exp)
+		err := cliConn.SendReliable(ctx, 0, exp)
 		if err != nil {
 			t.Fatal(err)
 		}

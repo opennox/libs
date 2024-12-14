@@ -2,9 +2,11 @@ package noxnet
 
 import (
 	"encoding/binary"
+	"errors"
 	"image"
 	"io"
 
+	"github.com/opennox/libs/binenc"
 	"github.com/opennox/libs/noxnet/netmsg"
 )
 
@@ -30,11 +32,49 @@ func (*MsgUpdateStream) NetOp() netmsg.Op {
 	return netmsg.MSG_UPDATE_STREAM
 }
 
-func (*MsgUpdateStream) EncodeSize() int {
-	panic("TODO")
+func (p *MsgUpdateStream) EncodeSize() int {
+	n := 0
+	n += p.ID.EncodeSize()
+	n += 5
+	if p.Flags&0x80 != 0 {
+		n++
+	}
+	n++
+	for _, obj := range p.Objects {
+		n += obj.EncodeSize()
+	}
+	n += 3 // FIXME?
+	return n
 }
 
 func (p *MsgUpdateStream) Encode(data []byte) (int, error) {
+	if len(data) < p.EncodeSize() {
+		return 0, io.ErrShortBuffer
+	}
+	off := 0
+	n, err := p.ID.Encode(data[off:])
+	if err != nil {
+		return n, err
+	}
+	off += n
+
+	binary.BigEndian.PutUint16(data[off+0:], uint16(p.Pos.X))
+	binary.BigEndian.PutUint16(data[off+2:], uint16(p.Pos.Y))
+	data[off+4] = p.Flags
+	off += 5
+
+	if p.Flags&0x80 != 0 {
+		data[off] = p.Unk4
+		off++
+	}
+
+	if len(p.Objects) == 0 {
+		data[off+0] = 0
+		data[off+1] = 0
+		data[off+3] = 0
+		off += 3
+		return off, nil
+	}
 	panic("TODO")
 }
 
@@ -92,36 +132,99 @@ func decodeUpdateID(data []byte) (UpdateID, int, error) {
 		return nil, 0, io.ErrUnexpectedEOF
 	}
 	alias := data[0]
+	var u UpdateID
 	if alias != 0xff {
-		return UpdateAlias(alias), 1, nil
+		u = &UpdateAlias{}
+	} else {
+		u = &UpdateObjectID{}
 	}
-	if len(data) < 4 {
-		return nil, 0, io.ErrUnexpectedEOF
+	n, err := u.Decode(data)
+	if err != nil {
+		return nil, 0, err
 	}
-	id := binary.LittleEndian.Uint16(data[1:3])
-	typ := binary.LittleEndian.Uint16(data[3:5])
-	return UpdateObjectID{ID: id, Type: typ}, 5, nil
+	return u, n, err
 }
 
 type UpdateID interface {
 	isUpdateID()
+	binenc.Encoded
 }
 
-type UpdateAlias byte
+type UpdateAlias struct {
+	Alias byte
+}
 
-func (UpdateAlias) isUpdateID() {}
+func (*UpdateAlias) isUpdateID() {}
+
+func (u *UpdateAlias) EncodeSize() int {
+	return 1
+}
+
+func (u *UpdateAlias) Encode(data []byte) (int, error) {
+	if len(data) < 1 {
+		return 0, io.ErrShortBuffer
+	}
+	if u.Alias == 0xff {
+		return 0, errors.New("not an alias")
+	}
+	data[0] = u.Alias
+	return 1, nil
+}
+
+func (u *UpdateAlias) Decode(data []byte) (int, error) {
+	if len(data) < 1 {
+		return 0, io.ErrUnexpectedEOF
+	}
+	alias := data[0]
+	if alias == 0xff {
+		return 0, errors.New("not an alias")
+	}
+	u.Alias = alias
+	return 1, nil
+}
 
 type UpdateObjectID struct {
-	ID   uint16
+	ID   NetCode
 	Type uint16
 }
 
-func (UpdateObjectID) isUpdateID() {}
+func (*UpdateObjectID) isUpdateID() {}
+
+func (u *UpdateObjectID) EncodeSize() int {
+	return 5
+}
+
+func (u *UpdateObjectID) Encode(data []byte) (int, error) {
+	if len(data) < 5 {
+		return 0, io.ErrShortBuffer
+	}
+	data[0] = 0xff
+	binary.LittleEndian.PutUint16(data[1:3], uint16(u.ID))
+	binary.LittleEndian.PutUint16(data[3:5], u.Type)
+	return 5, nil
+}
+
+func (u *UpdateObjectID) Decode(data []byte) (int, error) {
+	if len(data) < 5 {
+		return 0, io.ErrUnexpectedEOF
+	}
+	alias := data[0]
+	if alias != 0xff {
+		return 0, errors.New("not an object update")
+	}
+	u.ID = NetCode(binary.LittleEndian.Uint16(data[1:3]))
+	u.Type = binary.LittleEndian.Uint16(data[3:5])
+	return 5, nil
+}
 
 type ObjectUpdate struct {
 	ID      UpdateID
 	Pos     image.Point
 	Complex *ComplexObjectUpdate
+}
+
+func (*ObjectUpdate) EncodeSize() int {
+	panic("TODO")
 }
 
 type ComplexObjectUpdate struct {
@@ -135,26 +238,26 @@ func (p *ObjectUpdate) Decode(data []byte, par image.Point) (int, error) {
 	if len(left) < 3 {
 		return 0, io.ErrUnexpectedEOF
 	}
+	if data[0] == 0 && data[1] == 0 && data[2] == 0 {
+		return 3, io.EOF
+	}
 	alias := left[0]
 	left = left[1:]
 	rel := true
 	if alias == 0 {
 		alias = left[0]
 		left = left[1:]
-		if alias == 0 && left[1] == 0 {
-			return 3, io.EOF
-		}
 		rel = false
 	}
 	isComplex := false
 	if alias != 0xff {
-		p.ID = UpdateAlias(alias)
+		p.ID = &UpdateAlias{alias}
 		// FIXME: cannot check if it's a complex object without a map
 	} else {
-		id := binary.LittleEndian.Uint16(left[0:2])
+		id := NetCode(binary.LittleEndian.Uint16(left[0:2]))
 		typ := binary.LittleEndian.Uint16(left[2:4])
 		left = left[4:]
-		p.ID = UpdateObjectID{ID: id, Type: typ}
+		p.ID = &UpdateObjectID{ID: id, Type: typ}
 		isComplex = objectTypeIsComplex(typ)
 	}
 	if !rel {
@@ -202,8 +305,8 @@ func (m *MsgNewAlias) Encode(data []byte) (int, error) {
 	if len(data) < 9 {
 		return 0, io.ErrShortBuffer
 	}
-	data[0] = byte(m.Alias)
-	binary.LittleEndian.PutUint16(data[1:3], m.ID.ID)
+	data[0] = m.Alias.Alias
+	binary.LittleEndian.PutUint16(data[1:3], uint16(m.ID.ID))
 	binary.LittleEndian.PutUint16(data[3:5], m.ID.Type)
 	binary.LittleEndian.PutUint32(data[5:9], uint32(m.Deadline))
 	return 9, nil
@@ -213,8 +316,8 @@ func (m *MsgNewAlias) Decode(data []byte) (int, error) {
 	if len(data) < 9 {
 		return 0, io.ErrUnexpectedEOF
 	}
-	m.Alias = UpdateAlias(data[0])
-	id := binary.LittleEndian.Uint16(data[1:3])
+	m.Alias.Alias = data[0]
+	id := NetCode(binary.LittleEndian.Uint16(data[1:3]))
 	typ := binary.LittleEndian.Uint16(data[3:5])
 	m.ID = UpdateObjectID{
 		ID: id, Type: typ,

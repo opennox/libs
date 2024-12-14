@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"os"
 
+	_ "github.com/opennox/libs/noxnet"
 	"github.com/opennox/libs/noxnet/netmsg"
 )
 
@@ -40,6 +41,7 @@ func run() error {
 	defer w.Close()
 	enc := json.NewEncoder(w)
 
+	var mdec netmsg.State
 	for {
 		var r RecordIn
 		err := dec.Decode(&r)
@@ -48,7 +50,7 @@ func run() error {
 		} else if err != nil {
 			return err
 		}
-		r2 := r.Decode()
+		r2 := r.Decode(&mdec)
 		if err = enc.Encode(r2); err != nil {
 			return err
 		}
@@ -69,7 +71,7 @@ func isUnknown(m netmsg.Message) bool {
 	return ok
 }
 
-func (r RecordIn) Decode() RecordOut {
+func (r RecordIn) Decode(dec *netmsg.State) RecordOut {
 	o := RecordOut{
 		SrcID: r.SrcID,
 		DstID: r.DstID,
@@ -94,9 +96,10 @@ func (r RecordIn) Decode() RecordOut {
 	} else {
 		o.Ack = &seq
 	}
+	dec.IsClient = o.SrcID != 0
 	if len(data) == 1 {
 		op := netmsg.Op(data[0])
-		if _, _, err := netmsg.DecodeAny(data); err != nil {
+		if _, _, err := dec.DecodeNext(data); err != nil {
 			s := op.String()
 			o.Op = &s
 			return o
@@ -112,7 +115,7 @@ func (r RecordIn) Decode() RecordOut {
 			sz = n + 1
 			lenOK = true
 		}
-		if m, n, err := netmsg.DecodeAny(data); err == nil && n > 0 && !isUnknown(m) {
+		if m, n, err := dec.DecodeNext(data); err == nil && n > 0 && !isUnknown(m) {
 			sz = n
 			v = m
 			lenOK = true
@@ -130,27 +133,31 @@ func (r RecordIn) Decode() RecordOut {
 			Data:   hex.EncodeToString(msg),
 			Fields: v,
 		}
+		o.Ops = append(o.Ops, m.Op)
 		o.Msgs = append(o.Msgs, m)
 	}
 	if allSplit {
 		o.Data = ""
+	} else {
+		o.Ops = append(o.Ops, "???")
 	}
 	return o
 }
 
 type RecordOut struct {
-	SrcID uint32  `json:"src_id"`
-	DstID uint32  `json:"dst_id"`
-	Src   string  `json:"src"`
-	Dst   string  `json:"dst"`
-	Hdr   string  `json:"hdr"`
-	SID   byte    `json:"sid"`
-	Syn   *byte   `json:"syn,omitempty"`
-	Ack   *byte   `json:"ack,omitempty"`
-	Len   int     `json:"len"`
-	Op    *string `json:"op,omitempty"`
-	Msgs  []Msg   `json:"msgs,omitempty"`
-	Data  string  `json:"data,omitempty"`
+	SrcID uint32   `json:"src_id"`
+	DstID uint32   `json:"dst_id"`
+	Src   string   `json:"src"`
+	Dst   string   `json:"dst"`
+	Hdr   string   `json:"hdr"`
+	SID   byte     `json:"sid"`
+	Syn   *byte    `json:"syn,omitempty"`
+	Ack   *byte    `json:"ack,omitempty"`
+	Len   int      `json:"len"`
+	Op    *string  `json:"op,omitempty"`
+	Ops   []string `json:"ops,omitempty"`
+	Msgs  []Msg    `json:"msgs,omitempty"`
+	Data  string   `json:"data,omitempty"`
 }
 
 type Msg struct {

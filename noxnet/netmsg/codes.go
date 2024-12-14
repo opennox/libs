@@ -258,6 +258,8 @@ const (
 )
 
 var opLen = map[Op]int{
+	MSG_CODE2:                          0,
+	MSG_CODE3:                          0,
 	MSG_INCOMING_CLIENT:                0,
 	MSG_CLIENT_READY:                   0,
 	MSG_PLAYER_QUIT:                    2,
@@ -370,9 +372,7 @@ var opLen = map[Op]int{
 	MSG_RESET_ABILITIES:                1,
 	MSG_RATE_CHANGE:                    1,
 	MSG_STAT_MULTIPLIERS:               16,
-	MSG_IMPORTANT:                      -1,
 	MSG_UPDATE_STREAM:                  -1, // dynamic
 	MSG_TEAM_MSG:                       -1, // dynamic
-	MSG_SEQ_IMPORTANT:                  -1, // dynamic
 	MSG_GAUNTLET:                       -1, // dynamic
 }

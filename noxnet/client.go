@@ -21,7 +21,8 @@ var (
 )
 
 func NewClient(log *slog.Logger, conn udpconn.PacketConn) *Client {
-	return NewClientWithPort(log, udpconn.NewPort(log, conn, false))
+	p := udpconn.NewPort(log, conn, netmsg.Options{IsClient: true})
+	return NewClientWithPort(log, p)
 }
 
 func NewClientWithPort(log *slog.Logger, port *udpconn.Port) *Client {
@@ -50,9 +51,9 @@ type Client struct {
 
 	smu  sync.RWMutex
 	port *udpconn.Conn
-	srv  *udpconn.Stream
+	srv  udpconn.Stream
 	pid  uint32
-	own  *udpconn.Stream
+	own  udpconn.Stream
 }
 
 func (c *Client) LocalAddr() netip.AddrPort {
@@ -68,9 +69,9 @@ func (c *Client) Reset() {
 	c.smu.Lock()
 	defer c.smu.Unlock()
 	c.port = nil
-	c.srv = nil
+	c.srv = udpconn.Stream{}
 	c.pid = 0
-	c.own = nil
+	c.own = udpconn.Stream{}
 	c.Port.Reset()
 }
 
@@ -86,23 +87,23 @@ func (c *Client) SetServerAddr(addr netip.AddrPort) {
 	if addr.IsValid() {
 		c.smu.Lock()
 		c.port = c.Port.Conn(addr)
-		c.srv = c.port.WithID(udpconn.ServerStreamID)
+		c.srv = c.port.Stream(udpconn.ServerStreamID)
 		c.smu.Unlock()
 	}
 }
 
-func (c *Client) handleMsg(conn *udpconn.Conn, sid udpconn.StreamID, m netmsg.Message, flags udpconn.PacketFlags) bool {
+func (c *Client) handleMsg(s udpconn.Stream, m netmsg.Message, flags udpconn.PacketFlags) bool {
 	c.smu.RLock()
 	port := c.port
 	c.smu.RUnlock()
-	if port != nil && port == conn {
-		switch sid {
+	if port != nil && port == s.Conn() {
+		switch s.SID() {
 		case 0: // from server
 			return c.handleServerMsg(m)
 		}
 		return false
 	}
-	if sid != udpconn.ServerStreamID {
+	if s.SID() != udpconn.ServerStreamID {
 		return false
 	}
 	switch m := m.(type) {
@@ -119,7 +120,7 @@ func (c *Client) handleMsg(conn *udpconn.Conn, sid udpconn.StreamID, m netmsg.Me
 		v.Token = 0
 		select {
 		case ch <- ServerInfoResp{
-			Addr: conn.RemoteAddr(),
+			Addr: s.Conn().RemoteAddr(),
 			Info: v,
 		}:
 		default:
@@ -184,7 +185,7 @@ func (c *Client) joinSrv(ctx context.Context, req netmsg.Message, out chan<- net
 	c.smu.RLock()
 	srv := c.srv
 	c.smu.RUnlock()
-	if srv == nil {
+	if !srv.Valid() {
 		return nil, errors.New("server address must be set")
 	}
 	c.join.Lock()
@@ -201,9 +202,9 @@ func (c *Client) joinSrv(ctx context.Context, req netmsg.Message, out chan<- net
 	}
 	var err error
 	if reliable {
-		err = srv.SendReliableMsg(ctx, req)
+		err = srv.SendReliable(ctx, req)
 	} else {
-		err = srv.SendUnreliableMsg(req)
+		err = srv.SendUnreliable(req)
 	}
 	if err != nil {
 		cancel()
@@ -216,7 +217,7 @@ func (c *Client) joinOwn(ctx context.Context, req netmsg.Message, out chan<- net
 	c.smu.RLock()
 	own := c.own
 	c.smu.RUnlock()
-	if own == nil {
+	if !own.Valid() {
 		return nil, errors.New("not connected")
 	}
 	c.join.Lock()
@@ -233,9 +234,9 @@ func (c *Client) joinOwn(ctx context.Context, req netmsg.Message, out chan<- net
 	}
 	var err error
 	if reliable {
-		err = own.SendReliableMsg(ctx, req)
+		err = own.SendReliable(ctx, req)
 	} else {
-		err = own.SendUnreliableMsg(req)
+		err = own.SendUnreliable(req)
 	}
 	if err != nil {
 		cancel()
@@ -312,7 +313,7 @@ func (c *Client) connect(ctx context.Context, addr netip.AddrPort) error {
 			defer c.smu.Unlock()
 			c.port.Encrypt(resp.XorKey)
 			c.pid = resp.ID
-			c.own = c.port.WithID(udpconn.StreamID(resp.ID))
+			c.own = c.port.Stream(udpconn.SID(resp.ID))
 			return nil
 		}
 	}

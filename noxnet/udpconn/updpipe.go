@@ -7,6 +7,8 @@ import (
 	"net"
 	"net/netip"
 	"slices"
+
+	"github.com/opennox/libs/noxnet/netmsg"
 )
 
 type PipeConn struct {
@@ -104,7 +106,7 @@ func NewPipe(log *slog.Logger, buf int) (srv *PipeConn, cli *PipeConn) {
 		closed: make(chan struct{}),
 	}
 	srv.peer, cli.peer = cli, srv
-	srv.Port = NewPort(log, srv, true)
-	cli.Port = NewPort(log, cli, false)
+	srv.Port = NewPort(log, srv, netmsg.Options{IsClient: false})
+	cli.Port = NewPort(log, cli, netmsg.Options{IsClient: true})
 	return
 }
