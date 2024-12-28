@@ -1,6 +1,7 @@
 package types
 
 import (
+	"fmt"
 	"image"
 	"math"
 )
@@ -94,4 +95,8 @@ type RGB struct {
 	R byte `json:"r"`
 	G byte `json:"g"`
 	B byte `json:"b"`
+}
+
+func (c RGB) HexString() string {
+	return fmt.Sprintf("#%02X%02X%02X", c.R, c.G, c.B)
 }

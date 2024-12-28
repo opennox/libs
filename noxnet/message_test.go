@@ -16,6 +16,7 @@ import (
 	"github.com/opennox/libs/noxnet/mapsend"
 	"github.com/opennox/libs/noxnet/netmsg"
 	"github.com/opennox/libs/noxnet/netxfer"
+	"github.com/opennox/libs/types"
 )
 
 func TestDecodePacket(t *testing.T) {
@@ -77,17 +78,18 @@ func TestDecodePacket(t *testing.T) {
 					PlayerInfo: PlayerInfo{
 						PlayerName:  "Denn",
 						PlayerClass: 1,
-						Unk68:       19827,
-						Unk70:       34,
-						Unk71:       39642,
-						Unk73:       110,
-						Unk74:       39642,
-						Unk76:       110,
-						Unk77:       39642,
-						Unk79:       110,
-						Unk80:       39642,
-						Unk82:       110,
-						Unk83:       [6]byte{0x1f, 0x1f, 0x08, 0x17, 0x06, 0x00},
+						Colors: PlayerColors{
+							Hair:     types.RGB{R: 115, G: 77, B: 34},
+							Skin:     types.RGB{R: 218, G: 154, B: 110},
+							Mustache: types.RGB{R: 218, G: 154, B: 110},
+							Goatee:   types.RGB{R: 218, G: 154, B: 110},
+							Beard:    types.RGB{R: 218, G: 154, B: 110},
+							Pants:    31,
+							Shirt1:   31,
+							Shirt2:   8,
+							Shoes1:   23,
+							Shoes2:   6,
+						},
 					},
 					Screen: image.Point{X: 1024, Y: 768},
 					Serial: "1234567890123456789012",
@@ -146,17 +148,18 @@ func TestDecodePacket(t *testing.T) {
 				NetCode: 192,
 				PlayerInfo: PlayerInfo{
 					PlayerName: "Игрок",
-					Unk68:      19827,
-					Unk70:      34,
-					Unk71:      39642,
-					Unk73:      110,
-					Unk74:      39642,
-					Unk76:      110,
-					Unk77:      39642,
-					Unk79:      110,
-					Unk80:      39642,
-					Unk82:      110,
-					Unk83:      [6]byte{0x0c, 0x07, 0x13, 0x17, 0x06, 0x00},
+					Colors: PlayerColors{
+						Hair:     types.RGB{R: 115, G: 77, B: 34},
+						Skin:     types.RGB{R: 218, G: 154, B: 110},
+						Mustache: types.RGB{R: 218, G: 154, B: 110},
+						Goatee:   types.RGB{R: 218, G: 154, B: 110},
+						Beard:    types.RGB{R: 218, G: 154, B: 110},
+						Pants:    12,
+						Shirt1:   7,
+						Shirt2:   19,
+						Shoes1:   23,
+						Shoes2:   6,
+					},
 				},
 			},
 		},

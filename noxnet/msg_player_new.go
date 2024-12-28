@@ -6,6 +6,7 @@ import (
 
 	"github.com/opennox/libs/binenc"
 	"github.com/opennox/libs/noxnet/netmsg"
+	"github.com/opennox/libs/types"
 )
 
 func init() {
@@ -13,26 +14,98 @@ func init() {
 	netmsg.Register(&MsgPlayerRespawn{}, false)
 }
 
+type PlayerColors struct {
+	Hair     types.RGB // 0-2
+	Skin     types.RGB // 3-5
+	Mustache types.RGB // 6-8
+	Goatee   types.RGB // 9-11
+	Beard    types.RGB // 12-14
+	Pants    byte      // 15
+	Shirt1   byte      // 16
+	Shirt2   byte      // 17
+	Shoes1   byte      // 18
+	Shoes2   byte      // 19
+}
+
+func (*PlayerColors) EncodeSize() int {
+	return 20
+}
+
+func (p *PlayerColors) Encode(data []byte) (int, error) {
+	if len(data) < 20 {
+		return 0, io.ErrShortBuffer
+	}
+	data[0] = p.Hair.R
+	data[1] = p.Hair.G
+	data[2] = p.Hair.B
+
+	data[3] = p.Skin.R
+	data[4] = p.Skin.G
+	data[5] = p.Skin.B
+
+	data[6] = p.Mustache.R
+	data[7] = p.Mustache.G
+	data[8] = p.Mustache.B
+
+	data[9] = p.Goatee.R
+	data[10] = p.Goatee.G
+	data[11] = p.Goatee.B
+
+	data[12] = p.Beard.R
+	data[13] = p.Beard.G
+	data[14] = p.Beard.B
+
+	data[15] = p.Pants
+	data[16] = p.Shirt1
+	data[17] = p.Shirt2
+	data[18] = p.Shoes1
+	data[19] = p.Shoes2
+	return 20, nil
+}
+
+func (p *PlayerColors) Decode(data []byte) (int, error) {
+	if len(data) < 20 {
+		return 0, io.ErrUnexpectedEOF
+	}
+	p.Hair.R = data[0]
+	p.Hair.G = data[1]
+	p.Hair.B = data[2]
+
+	p.Skin.R = data[3]
+	p.Skin.G = data[4]
+	p.Skin.B = data[5]
+
+	p.Mustache.R = data[6]
+	p.Mustache.G = data[7]
+	p.Mustache.B = data[8]
+
+	p.Goatee.R = data[9]
+	p.Goatee.G = data[10]
+	p.Goatee.B = data[11]
+
+	p.Beard.R = data[12]
+	p.Beard.G = data[13]
+	p.Beard.B = data[14]
+
+	p.Pants = data[15]
+	p.Shirt1 = data[16]
+	p.Shirt2 = data[17]
+	p.Shoes1 = data[18]
+	p.Shoes2 = data[19]
+	return 20, nil
+}
+
 type PlayerInfo struct {
-	PlayerName     string  // 0-49
-	Unk50          uint32  // 50-53
-	Unk54          uint32  // 54-57
-	Unk58          uint32  // 58-61
-	Unk62          uint32  // 62-65
-	PlayerClass    byte    // 66
-	IsFemale       byte    // 67
-	Unk68          uint16  // 68-69
-	Unk70          byte    // 70
-	Unk71          uint16  // 71-72
-	Unk73          byte    // 73
-	Unk74          uint16  // 74-75
-	Unk76          byte    // 76
-	Unk77          uint16  // 77-78
-	Unk79          byte    // 79
-	Unk80          uint16  // 80-81
-	Unk82          byte    // 82
-	Unk83          [6]byte // 83-88
-	PlayerNameSuff string  // 89-96
+	PlayerName     string       // 0-49
+	Unk50          uint32       // 50-53
+	Unk54          uint32       // 54-57
+	Unk58          uint32       // 58-61
+	Unk62          uint32       // 62-65
+	PlayerClass    byte         // 66
+	IsFemale       byte         // 67
+	Colors         PlayerColors // 68-87
+	Unk88          byte         // 88
+	PlayerNameSuff string       // 89-96
 }
 
 func (*PlayerInfo) EncodeSize() int {
@@ -50,17 +123,10 @@ func (p *PlayerInfo) Encode(data []byte) (int, error) {
 	binary.LittleEndian.PutUint32(data[62:66], p.Unk62)
 	data[66] = p.PlayerClass
 	data[67] = p.IsFemale
-	binary.LittleEndian.PutUint16(data[68:70], p.Unk68)
-	data[70] = p.Unk70
-	binary.LittleEndian.PutUint16(data[71:73], p.Unk71)
-	data[73] = p.Unk73
-	binary.LittleEndian.PutUint16(data[74:76], p.Unk74)
-	data[76] = p.Unk76
-	binary.LittleEndian.PutUint16(data[77:79], p.Unk77)
-	data[79] = p.Unk79
-	binary.LittleEndian.PutUint16(data[80:82], p.Unk80)
-	data[82] = p.Unk82
-	copy(data[83:89], p.Unk83[:])
+	if _, err := p.Colors.Encode(data[68:88]); err != nil {
+		return 0, err
+	}
+	data[88] = p.Unk88
 	binenc.CStringSet16(data[89:97], p.PlayerNameSuff)
 	return 97, nil
 }
@@ -76,17 +142,10 @@ func (p *PlayerInfo) Decode(data []byte) (int, error) {
 	p.Unk62 = binary.LittleEndian.Uint32(data[62:66])
 	p.PlayerClass = data[66]
 	p.IsFemale = data[67]
-	p.Unk68 = binary.LittleEndian.Uint16(data[68:70])
-	p.Unk70 = data[70]
-	p.Unk71 = binary.LittleEndian.Uint16(data[71:73])
-	p.Unk73 = data[73]
-	p.Unk74 = binary.LittleEndian.Uint16(data[74:76])
-	p.Unk76 = data[76]
-	p.Unk77 = binary.LittleEndian.Uint16(data[77:79])
-	p.Unk79 = data[79]
-	p.Unk80 = binary.LittleEndian.Uint16(data[80:82])
-	p.Unk82 = data[82]
-	copy(p.Unk83[:], data[83:89])
+	if _, err := p.Colors.Decode(data[68:88]); err != nil {
+		return 0, err
+	}
+	p.Unk88 = data[88]
 	p.PlayerNameSuff = binenc.CString16(data[89:97])
 	return 97, nil
 }
